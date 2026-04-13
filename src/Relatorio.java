@@ -1,5 +1,5 @@
 public class Relatorio {
-    int id;
+    int idRelatorio;
     Carteira carteira;
     String dataGeracao;
     double valorTotalCarteira;
@@ -8,7 +8,7 @@ public class Relatorio {
     double rentabilidadePercentual;
 
     public Relatorio(int id, Carteira carteira, String dataGeracao) {
-        this.id = id;
+        this.idRelatorio = id;
         this.carteira = carteira;
         this.dataGeracao = dataGeracao;
         this.valorTotalCarteira = carteira.calcularValorTotal();

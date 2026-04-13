@@ -1,6 +1,6 @@
 public class Transacao {
 
-    int id;
+    int idTransacao;
     String tipo;
     Criptoativo criptoativo;
     double quantidade;
@@ -10,7 +10,7 @@ public class Transacao {
 
     public Transacao(int id, String tipo, Criptoativo criptoativo,
                      double quantidade, String dataOperacao) {
-        this.id = id;
+        this.idTransacao = id;
         this.criptoativo = criptoativo;
         this.quantidade = quantidade;
         this.precoUnitario = criptoativo.precoAtual;

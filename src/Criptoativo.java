@@ -1,5 +1,5 @@
 public class Criptoativo {
-    int id;
+    int idCripto;
     String nome;
     String sigla;
     double precoAtual;
@@ -7,7 +7,7 @@ public class Criptoativo {
     String categoria;
 
     public Criptoativo(int id, String nome, String sigla, double precoAtual, String categoria) {
-        this.id = id;
+        this.idCripto = id;
         this.nome = nome;
         this.sigla = sigla;
         this.precoAtual = precoAtual;

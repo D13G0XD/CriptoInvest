@@ -1,11 +1,11 @@
 public class Alerta {
-    int id;
+    int idAlerta;
     Criptoativo criptoativo;
     double limiteVariacao;
     boolean ativado;
 
     public Alerta(int id, Criptoativo criptoativo, double limiteVariacao) {
-        this.id = id;
+        this.idAlerta = id;
         this.criptoativo = criptoativo;
         this.limiteVariacao = limiteVariacao;
         this.ativado = true;
