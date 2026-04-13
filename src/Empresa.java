@@ -1,12 +1,12 @@
 public class Empresa {
 
-    int id;
+    int idEmpresa;
     String razaoSocial;
     String cnpj;
     Carteira carteira;
 
     public Empresa(int id, String razaoSocial, String cnpj) {
-        this.id = id;
+        this.idEmpresa = id;
         this.razaoSocial = razaoSocial;
         this.cnpj = cnpj;
         this.carteira = new Carteira(id, "Carteira - " + razaoSocial);

@@ -1,11 +1,11 @@
 public class Carteira {
-    int id;
+    int idCarteira;
     String descricao;
     Transacao[] transacoes;
     int totalTransacoes;
 
     public Carteira(int id, String descricao) {
-        this.id = id;
+        this.idCarteira = id;
         this.descricao = descricao;
         this.transacoes = new Transacao[100];
         this.totalTransacoes = 0;
