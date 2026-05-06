@@ -1,4 +1,52 @@
 public class Criptoativo {
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public String getSigla() {
+        return sigla;
+    }
+
+    public void setSigla(String sigla) {
+        this.sigla = sigla;
+    }
+
+    public double getPrecoAtual() {
+        return precoAtual;
+    }
+
+    public void setPrecoAtual(double precoAtual) {
+        this.precoAtual = precoAtual;
+    }
+
+    public double getVariacao24h() {
+        return variacao24h;
+    }
+
+    public void setVariacao24h(double variacao24h) {
+        this.variacao24h = variacao24h;
+    }
+
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    public int getIdCripto() {
+        return idCripto;
+    }
+
+    public void setIdCripto(int idCripto) {
+        this.idCripto = idCripto;
+    }
+
     int idCripto;
     String nome;
     String sigla;

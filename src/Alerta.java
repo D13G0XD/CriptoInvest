@@ -1,4 +1,36 @@
 public class Alerta {
+    public int getIdAlerta() {
+        return idAlerta;
+    }
+
+    public boolean isAtivado() {
+        return ativado;
+    }
+
+    public void setAtivado(boolean ativado) {
+        this.ativado = ativado;
+    }
+
+    public double getLimiteVariacao() {
+        return limiteVariacao;
+    }
+
+    public void setLimiteVariacao(double limiteVariacao) {
+        this.limiteVariacao = limiteVariacao;
+    }
+
+    public Criptoativo getCriptoativo() {
+        return criptoativo;
+    }
+
+    public void setCriptoativo(Criptoativo criptoativo) {
+        this.criptoativo = criptoativo;
+    }
+
+    public void setIdAlerta(int idAlerta) {
+        this.idAlerta = idAlerta;
+    }
+
     int idAlerta;
     Criptoativo criptoativo;
     double limiteVariacao;

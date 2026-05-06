@@ -1,5 +1,37 @@
 public class Empresa {
 
+    public String getRazaoSocial() {
+        return razaoSocial;
+    }
+
+    public void setRazaoSocial(String razaoSocial) {
+        this.razaoSocial = razaoSocial;
+    }
+
+    public String getCnpj() {
+        return cnpj;
+    }
+
+    public void setCnpj(String cnpj) {
+        this.cnpj = cnpj;
+    }
+
+    public Carteira getCarteira() {
+        return carteira;
+    }
+
+    public void setCarteira(Carteira carteira) {
+        this.carteira = carteira;
+    }
+
+    public int getIdEmpresa() {
+        return idEmpresa;
+    }
+
+    public void setIdEmpresa(int idEmpresa) {
+        this.idEmpresa = idEmpresa;
+    }
+
     int idEmpresa;
     String razaoSocial;
     String cnpj;

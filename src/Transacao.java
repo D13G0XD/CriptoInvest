@@ -1,5 +1,61 @@
 public class Transacao {
 
+    public String getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
+    }
+
+    public Criptoativo getCriptoativo() {
+        return criptoativo;
+    }
+
+    public void setCriptoativo(Criptoativo criptoativo) {
+        this.criptoativo = criptoativo;
+    }
+
+    public double getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(double quantidade) {
+        this.quantidade = quantidade;
+    }
+
+    public double getPrecoUnitario() {
+        return precoUnitario;
+    }
+
+    public void setPrecoUnitario(double precoUnitario) {
+        this.precoUnitario = precoUnitario;
+    }
+
+    public double getTaxa() {
+        return taxa;
+    }
+
+    public void setTaxa(double taxa) {
+        this.taxa = taxa;
+    }
+
+    public String getDataOperacao() {
+        return dataOperacao;
+    }
+
+    public void setDataOperacao(String dataOperacao) {
+        this.dataOperacao = dataOperacao;
+    }
+
+    public int getIdTransacao() {
+        return idTransacao;
+    }
+
+    public void setIdTransacao(int idTransacao) {
+        this.idTransacao = idTransacao;
+    }
+
     int idTransacao;
     String tipo;
     Criptoativo criptoativo;

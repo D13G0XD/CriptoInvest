@@ -1,4 +1,60 @@
 public class Relatorio {
+    public Carteira getCarteira() {
+        return carteira;
+    }
+
+    public void setCarteira(Carteira carteira) {
+        this.carteira = carteira;
+    }
+
+    public String getDataGeracao() {
+        return dataGeracao;
+    }
+
+    public void setDataGeracao(String dataGeracao) {
+        this.dataGeracao = dataGeracao;
+    }
+
+    public double getValorTotalCarteira() {
+        return valorTotalCarteira;
+    }
+
+    public void setValorTotalCarteira(double valorTotalCarteira) {
+        this.valorTotalCarteira = valorTotalCarteira;
+    }
+
+    public double getTotalInvestido() {
+        return totalInvestido;
+    }
+
+    public void setTotalInvestido(double totalInvestido) {
+        this.totalInvestido = totalInvestido;
+    }
+
+    public double getTotalTaxas() {
+        return totalTaxas;
+    }
+
+    public void setTotalTaxas(double totalTaxas) {
+        this.totalTaxas = totalTaxas;
+    }
+
+    public double getRentabilidadePercentual() {
+        return rentabilidadePercentual;
+    }
+
+    public void setRentabilidadePercentual(double rentabilidadePercentual) {
+        this.rentabilidadePercentual = rentabilidadePercentual;
+    }
+
+    public int getIdRelatorio() {
+        return idRelatorio;
+    }
+
+    public void setIdRelatorio(int idRelatorio) {
+        this.idRelatorio = idRelatorio;
+    }
+
     int idRelatorio;
     Carteira carteira;
     String dataGeracao;

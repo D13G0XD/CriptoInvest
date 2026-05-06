@@ -1,6 +1,95 @@
 public class Usuario {
 
     int id;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getSenha() {
+        return senha;
+    }
+
+    public void setSenha(String senha) {
+        this.senha = senha;
+    }
+
+    public String getCpf() {
+        return cpf;
+    }
+
+    public void setCpf(String cpf) {
+        this.cpf = cpf;
+    }
+
+    public boolean isAutenticacaoDoisFatores() {
+        return autenticacaoDoisFatores;
+    }
+
+    public void setAutenticacaoDoisFatores(boolean autenticacaoDoisFatores) {
+        this.autenticacaoDoisFatores = autenticacaoDoisFatores;
+    }
+
+    public double getSaldoReais() {
+        return saldoReais;
+    }
+
+    public void setSaldoReais(double saldoReais) {
+        this.saldoReais = saldoReais;
+    }
+
+    public Carteira[] getCarteiras() {
+        return carteiras;
+    }
+
+    public void setCarteiras(Carteira[] carteiras) {
+        this.carteiras = carteiras;
+    }
+
+    public Empresa[] getEmpresas() {
+        return empresas;
+    }
+
+    public void setEmpresas(Empresa[] empresas) {
+        this.empresas = empresas;
+    }
+
+    public int getTotalCarteiras() {
+        return totalCarteiras;
+    }
+
+    public void setTotalCarteiras(int totalCarteiras) {
+        this.totalCarteiras = totalCarteiras;
+    }
+
+    public int getTotalEmpresas() {
+        return totalEmpresas;
+    }
+
+    public void setTotalEmpresas(int totalEmpresas) {
+        this.totalEmpresas = totalEmpresas;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
     String nome;
     String email;
     String senha;

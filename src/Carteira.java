@@ -1,5 +1,38 @@
 public class Carteira {
+    public int getIdCarteira() {
+        return idCarteira;
+    }
+
+    public void setIdCarteira(int idCarteira) {
+        this.idCarteira = idCarteira;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public void setDescricao(String descricao) {
+        this.descricao = descricao;
+    }
+
+    public Transacao[] getTransacoes() {
+        return transacoes;
+    }
+
+    public void setTransacoes(Transacao[] transacoes) {
+        this.transacoes = transacoes;
+    }
+
     int idCarteira;
+
+    public int getTotalTransacoes() {
+        return totalTransacoes;
+    }
+
+    public void setTotalTransacoes(int totalTransacoes) {
+        this.totalTransacoes = totalTransacoes;
+    }
+
     String descricao;
     Transacao[] transacoes;
     int totalTransacoes;
