@@ -1,5 +1,25 @@
 public class Empresa {
 
+    int idEmpresa;
+    String razaoSocial;
+    String cnpj;
+    Carteira carteira;
+
+    public Empresa(int id, String razaoSocial, String cnpj) {
+        this.idEmpresa = id;
+        this.razaoSocial = razaoSocial;
+        this.cnpj = cnpj;
+        this.carteira = new Carteira(id, "Carteira - " + razaoSocial);
+    }
+
+    public int getIdEmpresa() {
+        return idEmpresa;
+    }
+
+    public void setIdEmpresa(int idEmpresa) {
+        this.idEmpresa = idEmpresa;
+    }
+
     public String getRazaoSocial() {
         return razaoSocial;
     }
@@ -22,26 +42,6 @@ public class Empresa {
 
     public void setCarteira(Carteira carteira) {
         this.carteira = carteira;
-    }
-
-    public int getIdEmpresa() {
-        return idEmpresa;
-    }
-
-    public void setIdEmpresa(int idEmpresa) {
-        this.idEmpresa = idEmpresa;
-    }
-
-    int idEmpresa;
-    String razaoSocial;
-    String cnpj;
-    Carteira carteira;
-
-    public Empresa(int id, String razaoSocial, String cnpj) {
-        this.idEmpresa = id;
-        this.razaoSocial = razaoSocial;
-        this.cnpj = cnpj;
-        this.carteira = new Carteira(id, "Carteira - " + razaoSocial);
     }
 
     public void exibirDados() {

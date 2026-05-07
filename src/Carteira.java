@@ -1,4 +1,17 @@
 public class Carteira {
+
+    int idCarteira;
+    String descricao;
+    Transacao[] transacoes;
+    int totalTransacoes;
+
+    public Carteira(int id, String descricao) {
+        this.idCarteira = id;
+        this.descricao = descricao;
+        this.transacoes = new Transacao[100];
+        this.totalTransacoes = 0;
+    }
+
     public int getIdCarteira() {
         return idCarteira;
     }
@@ -23,25 +36,12 @@ public class Carteira {
         this.transacoes = transacoes;
     }
 
-    int idCarteira;
-
     public int getTotalTransacoes() {
         return totalTransacoes;
     }
 
     public void setTotalTransacoes(int totalTransacoes) {
         this.totalTransacoes = totalTransacoes;
-    }
-
-    String descricao;
-    Transacao[] transacoes;
-    int totalTransacoes;
-
-    public Carteira(int id, String descricao) {
-        this.idCarteira = id;
-        this.descricao = descricao;
-        this.transacoes = new Transacao[100];
-        this.totalTransacoes = 0;
     }
 
     public void registrarTransacao(Transacao transacao) {
@@ -55,54 +55,74 @@ public class Carteira {
 
     public double calcularSaldoCripto(String sigla) {
         double saldo = 0;
+
         for (int i = 0; i < totalTransacoes; i++) {
             if (transacoes[i].criptoativo.sigla.equals(sigla)) {
+
                 if (transacoes[i].tipo.equals("COMPRA")) {
                     saldo += transacoes[i].quantidade;
+
                 } else if (transacoes[i].tipo.equals("VENDA")) {
                     saldo -= transacoes[i].quantidade;
                 }
             }
         }
+
         return saldo;
     }
 
     public double calcularValorTotal() {
         double total = 0;
+
         for (int i = 0; i < totalTransacoes; i++) {
+
             if (transacoes[i].tipo.equals("COMPRA")) {
+
                 String sigla = transacoes[i].criptoativo.sigla;
+
                 double saldoCripto = calcularSaldoCripto(sigla);
+
                 if (saldoCripto > 0) {
                     total += saldoCripto * transacoes[i].criptoativo.precoAtual;
                 }
             }
         }
+
         return total;
     }
 
     public double calcularTotalInvestido() {
         double investido = 0;
+
         for (int i = 0; i < totalTransacoes; i++) {
+
             if (transacoes[i].tipo.equals("COMPRA")) {
                 investido += transacoes[i].calcularValorComTaxa();
             }
         }
+
         return investido;
     }
 
     public double calcularTotalTaxas() {
         double taxas = 0;
+
         for (int i = 0; i < totalTransacoes; i++) {
             taxas += transacoes[i].taxa;
         }
+
         return taxas;
     }
 
     public double calcularRentabilidade() {
         double investido = calcularTotalInvestido();
-        if (investido == 0) return 0;
+
+        if (investido == 0) {
+            return 0;
+        }
+
         double atual = calcularValorTotal();
+
         return ((atual - investido) / investido) * 100;
     }
 
