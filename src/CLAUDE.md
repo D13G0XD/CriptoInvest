@@ -12,19 +12,19 @@ This is a plain Java project with no Maven or Gradle. Compile and run directly w
 
 **Compile all classes:**
 ```
-javac src/*.java -d out/
+javac src/com/criptoinvest/model/*.java -d out/
 ```
 
 **Run a class (e.g., a manual test main):**
 ```
-java -cp out/ ClassName
+java -cp out/ com.criptoinvest.model.ClassName
 ```
 
 There is no test framework configured. Verification is done by writing a `main` method in a scratch class, compiling, and running it.
 
 ## Architecture
 
-All classes live in `src/` with no package declaration. The domain model is structured around a single root aggregate (`Usuario`) that owns `Carteira` and `Empresa` instances.
+All classes live in `src/com/criptoinvest/model/` under the package `com.criptoinvest.model`. The domain model is structured around a single root aggregate (`Usuario`) that owns `Carteira` and `Empresa` instances.
 
 ### Key design decisions
 
