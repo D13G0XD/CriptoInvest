@@ -1,12 +1,12 @@
 public class Transacao {
 
-    int idTransacao;
-    String tipo;
-    Criptoativo criptoativo;
-    double quantidade;
-    double precoUnitario;
-    double taxa;
-    String dataOperacao;
+    private int idTransacao;
+    private String tipo;
+    private Criptoativo criptoativo;
+    private double quantidade;
+    private double precoUnitario;
+    private double taxa;
+    private String dataOperacao;
 
     public Transacao(int id, String tipo, Criptoativo criptoativo,
                      double quantidade, String dataOperacao) {
@@ -14,7 +14,7 @@ public class Transacao {
         this.idTransacao = id;
         this.criptoativo = criptoativo;
         this.quantidade = quantidade;
-        this.precoUnitario = criptoativo.precoAtual;
+        this.precoUnitario = criptoativo.getPrecoAtual();
         this.dataOperacao = dataOperacao;
 
         if (tipo.equals("COMPRA") || tipo.equals("VENDA") || tipo.equals("CONVERSAO")) {
@@ -97,7 +97,7 @@ public class Transacao {
     }
 
     public double calcularValorAtual() {
-        return quantidade * criptoativo.precoAtual;
+        return quantidade * criptoativo.getPrecoAtual();
     }
 
     public double calcularLucro() {
@@ -111,7 +111,7 @@ public class Transacao {
     public void exibirDados() {
         System.out.println("=== Transacao ===");
         System.out.println("Tipo: " + tipo);
-        System.out.println("Cripto: " + criptoativo.sigla);
+        System.out.println("Cripto: " + criptoativo.getSigla());
         System.out.println("Quantidade: " + quantidade);
         System.out.println("Preco Unitario: R$ " + precoUnitario);
         System.out.println("Valor Bruto: R$ " + String.format("%.2f", calcularValorBruto()));

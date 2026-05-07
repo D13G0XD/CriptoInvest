@@ -1,9 +1,9 @@
 public class Alerta {
 
-    int idAlerta;
-    Criptoativo criptoativo;
-    double limiteVariacao;
-    boolean ativado;
+    private int idAlerta;
+    private Criptoativo criptoativo;
+    private double limiteVariacao;
+    private boolean ativado;
 
     public Alerta(int id, Criptoativo criptoativo, double limiteVariacao) {
         this.idAlerta = id;
@@ -47,7 +47,7 @@ public class Alerta {
     public boolean verificarDisparo() {
         if (!ativado) return false;
 
-        double variacao = criptoativo.variacao24h;
+        double variacao = criptoativo.getVariacao24h();
 
         if (variacao >= limiteVariacao || variacao <= -limiteVariacao) {
             return true;
@@ -61,10 +61,10 @@ public class Alerta {
             return "Nenhum alerta no momento.";
         }
 
-        String direcao = criptoativo.variacao24h > 0 ? "subiu" : "caiu";
+        String direcao = criptoativo.getVariacao24h() > 0 ? "subiu" : "caiu";
 
-        return "ALERTA: " + criptoativo.sigla + " " + direcao + " " +
-                String.format("%.2f", Math.abs(criptoativo.variacao24h)) +
+        return "ALERTA: " + criptoativo.getSigla() + " " + direcao + " " +
+                String.format("%.2f", Math.abs(criptoativo.getVariacao24h())) +
                 "% (limite: " + limiteVariacao + "%)";
     }
 
@@ -78,7 +78,7 @@ public class Alerta {
 
     public void exibirDados() {
         System.out.println("=== Alerta ===");
-        System.out.println("Cripto: " + criptoativo.sigla);
+        System.out.println("Cripto: " + criptoativo.getSigla());
         System.out.println("Limite: " + limiteVariacao + "%");
         System.out.println("Ativado: " + ativado);
         System.out.println("Status: " + mensagemAlerta());
