@@ -1,56 +1,29 @@
 package com.criptoinvest.model;
 
-public class Empresa {
+public class Empresa extends Titular {
 
-    private int idEmpresa;
-    private String razaoSocial;
     private String cnpj;
-    private Carteira carteira;
+    private Usuario usuario;
 
     public Empresa(int id, String razaoSocial, String cnpj) {
-        this.idEmpresa = id;
-        this.razaoSocial = razaoSocial;
-        this.cnpj = cnpj;
-        this.carteira = new Carteira(id, "Carteira - " + razaoSocial);
-    }
-
-    public int getIdEmpresa() {
-        return idEmpresa;
-    }
-
-    public void setIdEmpresa(int idEmpresa) {
-        this.idEmpresa = idEmpresa;
-    }
-
-    public String getRazaoSocial() {
-        return razaoSocial;
-    }
-
-    public void setRazaoSocial(String razaoSocial) {
-        this.razaoSocial = razaoSocial;
-    }
-
-    public String getCnpj() {
-        return cnpj;
-    }
-
-    public void setCnpj(String cnpj) {
+        super(id, razaoSocial, new Carteira(id, "Carteira - " + razaoSocial));
         this.cnpj = cnpj;
     }
 
-    public Carteira getCarteira() {
-        return carteira;
-    }
+    public String getCnpj() { return cnpj; }
+    public void setCnpj(String cnpj) { this.cnpj = cnpj; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
 
-    public void setCarteira(Carteira carteira) {
-        this.carteira = carteira;
-    }
-
+    @Override
     public void exibirDados() {
         System.out.println("=== Empresa ===");
-        System.out.println("Razao Social: " + razaoSocial);
+        System.out.println("Razao Social: " + getNome());
         System.out.println("CNPJ: " + cnpj);
+        if (usuario != null) {
+            System.out.println("Proprietario: " + usuario.getNome());
+        }
         System.out.println("--- Carteira da Empresa ---");
-        carteira.exibirResumo();
+        getCarteira().exibirResumo();
     }
 }
