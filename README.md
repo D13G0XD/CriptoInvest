@@ -80,4 +80,5 @@ Alerta    * ──── 1 Criptoativo
 | Sprint | Entrega |
 |---|---|
 | Sprint 1 — Fase 1 | Escopo do Produto (Problema, Público-Alvo e Solução) |
-| Sprint 2 — Fase 2 | Classes Java + Diagrama de Classes |
+| Sprint 2 — Fase 2 | Classes Java + Diagrama de Classes | 
+

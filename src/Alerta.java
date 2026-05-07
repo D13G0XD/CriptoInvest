@@ -1,4 +1,5 @@
 public class Alerta {
+
     int idAlerta;
     Criptoativo criptoativo;
     double limiteVariacao;
@@ -11,21 +12,60 @@ public class Alerta {
         this.ativado = true;
     }
 
+    public int getIdAlerta() {
+        return idAlerta;
+    }
+
+    public void setIdAlerta(int idAlerta) {
+        this.idAlerta = idAlerta;
+    }
+
+    public boolean isAtivado() {
+        return ativado;
+    }
+
+    public void setAtivado(boolean ativado) {
+        this.ativado = ativado;
+    }
+
+    public double getLimiteVariacao() {
+        return limiteVariacao;
+    }
+
+    public void setLimiteVariacao(double limiteVariacao) {
+        this.limiteVariacao = limiteVariacao;
+    }
+
+    public Criptoativo getCriptoativo() {
+        return criptoativo;
+    }
+
+    public void setCriptoativo(Criptoativo criptoativo) {
+        this.criptoativo = criptoativo;
+    }
+
     public boolean verificarDisparo() {
         if (!ativado) return false;
+
         double variacao = criptoativo.variacao24h;
+
         if (variacao >= limiteVariacao || variacao <= -limiteVariacao) {
             return true;
         }
+
         return false;
     }
 
     public String mensagemAlerta() {
-        if (!verificarDisparo()) return "Nenhum alerta no momento.";
+        if (!verificarDisparo()) {
+            return "Nenhum alerta no momento.";
+        }
+
         String direcao = criptoativo.variacao24h > 0 ? "subiu" : "caiu";
+
         return "ALERTA: " + criptoativo.sigla + " " + direcao + " " +
-               String.format("%.2f", Math.abs(criptoativo.variacao24h)) +
-               "% (limite: " + limiteVariacao + "%)";
+                String.format("%.2f", Math.abs(criptoativo.variacao24h)) +
+                "% (limite: " + limiteVariacao + "%)";
     }
 
     public void desativar() {
