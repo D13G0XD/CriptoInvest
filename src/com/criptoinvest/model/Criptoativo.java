@@ -76,6 +76,15 @@ public class Criptoativo {
         this.precoAtual = novoPreco;
     }
 
+    public void atualizarPreco(double novoPreco, double variacao) {
+        if (novoPreco < 0) {
+            System.out.println("Erro: preco nao pode ser negativo.");
+            return;
+        }
+        this.precoAtual = novoPreco;
+        this.variacao24h = variacao;
+    }
+
     public void exibirDados() {
         System.out.println("=== Criptoativo ===");
         System.out.println("Nome: " + nome + " (" + sigla + ")");
