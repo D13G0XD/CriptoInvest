@@ -1,16 +1,16 @@
 public class Usuario {
 
-    int id;
-    String nome;
-    String email;
-    String senha;
-    String cpf;
-    boolean autenticacaoDoisFatores;
-    double saldoReais;
-    Carteira[] carteiras;
-    Empresa[] empresas;
-    int totalCarteiras;
-    int totalEmpresas;
+    private int id;
+    private String nome;
+    private String email;
+    private String senha;
+    private String cpf;
+    private boolean autenticacaoDoisFatores;
+    private double saldoReais;
+    private Carteira[] carteiras;
+    private Empresa[] empresas;
+    private int totalCarteiras;
+    private int totalEmpresas;
 
     public Usuario(int id, String nome, String email, String senha, String cpf) {
         this.id = id;

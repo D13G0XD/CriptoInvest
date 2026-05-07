@@ -1,9 +1,9 @@
 public class Empresa {
 
-    int idEmpresa;
-    String razaoSocial;
-    String cnpj;
-    Carteira carteira;
+    private int idEmpresa;
+    private String razaoSocial;
+    private String cnpj;
+    private Carteira carteira;
 
     public Empresa(int id, String razaoSocial, String cnpj) {
         this.idEmpresa = id;

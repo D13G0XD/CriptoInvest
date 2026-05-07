@@ -1,11 +1,11 @@
 public class Criptoativo {
 
-    int idCripto;
-    String nome;
-    String sigla;
-    double precoAtual;
-    double variacao24h;
-    String categoria;
+    private int idCripto;
+    private String nome;
+    private String sigla;
+    private double precoAtual;
+    private double variacao24h;
+    private String categoria;
 
     public Criptoativo(int id, String nome, String sigla, double precoAtual, String categoria) {
         this.idCripto = id;

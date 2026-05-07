@@ -1,12 +1,12 @@
 public class Relatorio {
 
-    int idRelatorio;
-    Carteira carteira;
-    String dataGeracao;
-    double valorTotalCarteira;
-    double totalInvestido;
-    double totalTaxas;
-    double rentabilidadePercentual;
+    private int idRelatorio;
+    private Carteira carteira;
+    private String dataGeracao;
+    private double valorTotalCarteira;
+    private double totalInvestido;
+    private double totalTaxas;
+    private double rentabilidadePercentual;
 
     public Relatorio(int id, Carteira carteira, String dataGeracao) {
         this.idRelatorio = id;
@@ -81,7 +81,7 @@ public class Relatorio {
     public String gerarResumo() {
         return "=== Relatorio de Desempenho ===\n" +
                 "Data: " + dataGeracao + "\n" +
-                "Carteira: " + carteira.descricao + "\n" +
+                "Carteira: " + carteira.getDescricao() + "\n" +
                 "Total Investido: R$ " + String.format("%.2f", totalInvestido) + "\n" +
                 "Valor Atual: R$ " + String.format("%.2f", valorTotalCarteira) + "\n" +
                 "Taxas Pagas: R$ " + String.format("%.2f", totalTaxas) + "\n" +
