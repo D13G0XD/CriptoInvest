@@ -1,3 +1,5 @@
+package com.criptoinvest.model;
+
 public class Empresa {
 
     private int idEmpresa;

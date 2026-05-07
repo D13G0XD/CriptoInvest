@@ -1,3 +1,5 @@
+package com.criptoinvest.model;
+
 public class Transacao {
 
     private int idTransacao;

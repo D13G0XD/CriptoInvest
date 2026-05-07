@@ -1,3 +1,5 @@
+package com.criptoinvest.model;
+
 public class Relatorio {
 
     private int idRelatorio;
