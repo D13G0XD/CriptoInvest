@@ -1,3 +1,5 @@
+package com.criptoinvest.model;
+
 public class Carteira {
 
     private int idCarteira;
