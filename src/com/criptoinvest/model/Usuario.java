@@ -48,6 +48,15 @@ public class Usuario extends Titular {
         System.out.println("Deposito de R$ " + valor + " realizado. Saldo: R$ " + saldoReais);
     }
 
+    public void depositar(double valor, String descricao) {
+        if (valor <= 0) {
+            System.out.println("Erro: valor deve ser positivo.");
+            return;
+        }
+        this.saldoReais += valor;
+        System.out.println("Deposito de R$ " + valor + " (" + descricao + ") realizado. Saldo: R$ " + saldoReais);
+    }
+
     public void sacar(double valor) {
         if (valor <= 0) {
             System.out.println("Erro: valor deve ser positivo.");

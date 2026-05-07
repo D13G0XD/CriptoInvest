@@ -55,6 +55,16 @@ public class Carteira {
         }
     }
 
+    public void registrarTransacao(Transacao transacao, String observacao) {
+        if (totalTransacoes < 100) {
+            transacoes[totalTransacoes] = transacao;
+            totalTransacoes++;
+            System.out.println("Observacao: " + observacao);
+        } else {
+            System.out.println("Erro: limite de transacoes atingido.");
+        }
+    }
+
     public double calcularSaldoCripto(String sigla) {
         double saldo = 0;
 
