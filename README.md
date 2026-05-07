@@ -8,7 +8,7 @@ Projeto acadêmico desenvolvido pela equipe **VOLTZ Engenharia de Software** par
 
 ## Sobre o Projeto
 
-O CriptoInvest é uma plataforma web voltada para investidores pessoa física e jurídica que desejam gerenciar seus portfólios de criptoativos de forma centralizada, segura e com acompanhamento diário de desempenho.
+O CriptoInvest é uma plataforma voltada para investidores pessoa física e jurídica que desejam gerenciar seus portfólios de criptoativos de forma centralizada, segura e com acompanhamento diário de desempenho.
 
 O sistema resolve problemas reais enfrentados por investidores no mercado cripto: fragmentação de ativos em múltiplas exchanges, falta de acompanhamento em tempo real, ausência de relatórios gerenciais e dificuldade na gestão de investimentos distribuídos entre múltiplas empresas (CNPJs).
 
@@ -17,8 +17,6 @@ O sistema resolve problemas reais enfrentados por investidores no mercado cripto
 O mercado de criptoativos ultrapassou a marca de 2,5 trilhões de dólares em capitalização global, e o Brasil ocupa a 5ª posição no Índice Global de Adoção de Criptomoedas (Chainalysis). Apesar desse crescimento, investidores ainda carecem de ferramentas que combinem gestão multiempresa, relatórios robustos e segurança em uma única plataforma.
 
 ## Público-Alvo
-
-O sistema atende três perfis principais de usuários:
 
 - **Empresários** com múltiplos CNPJs que buscam controle centralizado dos investimentos em criptoativos de cada empresa.
 - **Investidores experientes** que utilizam aplicativos financeiros e desejam monitoramento em tempo real com dashboards intuitivos.
@@ -30,40 +28,68 @@ O sistema atende três perfis principais de usuários:
 - **Gestão de investimentos** com registro de aportes, histórico de transações e simulador de rentabilidade.
 - **Gestão multiempresa** com cadastro de múltiplos CNPJs, separação de portfólios por empresa e visão gerencial unificada.
 - **Segurança** com autenticação em dois fatores (2FA), criptografia de dados e conformidade com a LGPD.
-- **Relatórios e exportação** com relatórios diários de performance, exportação em PDF/CSV/XML e integração com declaração de IR.
+- **Relatórios e exportação** com relatórios diários de performance e exportação de dados.
 - **Alertas** configuráveis para variações de preço dos criptoativos monitorados.
+
+## Como Executar
+
+O projeto é Java puro, sem framework ou build tool. Compile e execute diretamente com `javac`/`java`.
+
+**Compilar:**
+```
+javac src/com/criptoinvest/model/*.java -d out/
+```
+
+**Executar:**
+```
+java -cp out/ com.criptoinvest.model.Main
+```
 
 ## Estrutura de Classes
 
-O projeto é composto por 7 classes:
+Todas as classes estão no pacote `com.criptoinvest.model`:
 
 ```
-src/
-├── Usuario.java       → Cadastro do usuário com 2FA e vinculação a carteiras e empresas
-├── Empresa.java       → Representa um CNPJ vinculado ao usuário
-├── Carteira.java      → Agrupa transações e calcula valor total e rentabilidade
-├── Criptoativo.java   → Representa uma criptomoeda (BTC, ETH, etc.)
-├── Transacao.java     → Registro de compra, venda ou conversão de um criptoativo (taxa de 0,1%)
-├── Relatorio.java     → Snapshot de desempenho de uma carteira em determinada data
-└── Alerta.java        → Monitora variação de preço e dispara quando ultrapassa o limite
+src/com/criptoinvest/model/
+├── Titular.java      → Classe abstrata base para Usuario e Empresa
+├── Usuario.java      → Investidor pessoa física com 2FA e carteira própria
+├── Empresa.java      → Investidor pessoa jurídica (CNPJ) vinculado a um Usuario
+├── Carteira.java     → Agrupa transações e calcula valor total e rentabilidade
+├── Criptoativo.java  → Representa uma criptomoeda (BTC, ETH, etc.)
+├── Transacao.java    → Registro de compra, venda ou conversão (taxa de 0,1%)
+├── Relatorio.java    → Snapshot de desempenho de uma carteira em determinada data
+├── Alerta.java       → Monitora variação de preço e dispara quando ultrapassa o limite
+└── Main.java         → Ponto de entrada com demonstração de todas as funcionalidades
 ```
 
-### Diagrama de Classes (resumo dos relacionamentos)
+### Diagrama de Relacionamentos
 
 ```
-Usuario   1 ──── * Carteira
-Usuario   1 ──── * Empresa
-Empresa   1 ──── 1 Carteira
+Titular   (abstract)
+├── Usuario   1 ──── * Empresa
+│             1 ──── 1 Carteira
+└── Empresa   * ──── 1 Usuario
+              1 ──── 1 Carteira
+
 Carteira  1 ──── * Transacao
 Transacao * ──── 1 Criptoativo
 Relatorio * ──── 1 Carteira
 Alerta    * ──── 1 Criptoativo
 ```
 
+## Conceitos de POO Aplicados
+
+| Conceito | Implementação |
+|---|---|
+| **Encapsulamento** | Todos os campos são `private`, acessados via getters/setters |
+| **Herança** | `Usuario` e `Empresa` estendem `Titular` |
+| **Polimorfismo dinâmico** | `exibirDados()` abstrato em `Titular`, sobrescrito em cada subclasse |
+| **Polimorfismo estático** | Sobrecarga de `depositar`, `registrarTransacao` e `atualizarPreco` |
+
 ## Tecnologias
 
-- **Linguagem:** Java (SE)
-- **Back-end (previsto):** Java
+- **Linguagem:** Java SE
+- **JDK:** OpenJDK 26
 
 ## Equipe VOLTZ
 
@@ -80,5 +106,5 @@ Alerta    * ──── 1 Criptoativo
 | Sprint | Entrega |
 |---|---|
 | Sprint 1 — Fase 1 | Escopo do Produto (Problema, Público-Alvo e Solução) |
-| Sprint 2 — Fase 2 | Classes Java + Diagrama de Classes | 
-
+| Sprint 2 — Fase 2 | Classes Java + Diagrama de Classes |
+| Sprint 3 — Fase 3 | Encapsulamento, Herança, Polimorfismo e Classe Main |
