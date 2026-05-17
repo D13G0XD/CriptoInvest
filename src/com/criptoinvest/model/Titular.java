@@ -2,9 +2,9 @@ package com.criptoinvest.model;
 
 public abstract class Titular {
 
-    private int id;
+    private int id;              // PK (herdada por Usuario e Empresa)
     private String nome;
-    private Carteira carteira;
+    private Carteira carteira;   // FK -> Carteira (idCarteira) - relacionamento 1:1 obrigatorio
 
     public Titular(int id, String nome, Carteira carteira) {
         this.id = id;

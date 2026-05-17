@@ -2,7 +2,10 @@ package com.criptoinvest.model;
 
 public class Empresa extends Titular {
 
+    // PK: id herdada de Titular
+    // FK -> Carteira (idCarteira) herdada de Titular - relacionamento 1:1 obrigatorio
     private String cnpj;
+    // Relacionamento N:N com Usuario: navegacao legada (substituida formalmente por Participacao)
     private Usuario usuario;
 
     public Empresa(int id, String razaoSocial, String cnpj) {

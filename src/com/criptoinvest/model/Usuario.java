@@ -2,11 +2,14 @@ package com.criptoinvest.model;
 
 public class Usuario extends Titular {
 
+    // PK: id herdada de Titular
+    // FK -> Carteira (idCarteira) herdada de Titular - relacionamento 1:1 obrigatorio
     private String email;
     private String senha;
     private String cpf;
     private boolean autenticacaoDoisFatores;
     private double saldoReais;
+    // Relacionamento N:N com Empresa: navegacao legada (substituida formalmente por Participacao)
     private Empresa[] empresas;
     private int totalEmpresas;
 

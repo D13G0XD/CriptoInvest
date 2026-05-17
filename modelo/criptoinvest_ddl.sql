@@ -1,0 +1,346 @@
+-- ============================================================================
+-- CriptoInvest - DDL Oracle 19c+
+-- Modelo relacional gerado a partir do dominio Java (com.criptoinvest.model)
+--
+-- Para importar no SQL Developer Data Modeler:
+--   File -> Import -> DDL File -> selecione este arquivo
+--   Target: Oracle Database 19c (ou superior)
+--
+-- Estrategia de heranca Titular -> (Usuario, Empresa):
+--   "Single Table Inheritance" com discriminador 'tipo_titular' ('U' ou 'E').
+--   Atributos especificos sao NULLABLE no nivel da tabela.
+-- ============================================================================
+
+-- Limpa objetos existentes (ordem reversa de dependencia)
+DROP TABLE alerta            CASCADE CONSTRAINTS;
+DROP TABLE participacao      CASCADE CONSTRAINTS;
+DROP TABLE posicao           CASCADE CONSTRAINTS;
+DROP TABLE relatorio         CASCADE CONSTRAINTS;
+DROP TABLE transacao         CASCADE CONSTRAINTS;
+DROP TABLE criptoativo       CASCADE CONSTRAINTS;
+DROP TABLE titular           CASCADE CONSTRAINTS;
+DROP TABLE carteira          CASCADE CONSTRAINTS;
+
+DROP SEQUENCE seq_titular;
+DROP SEQUENCE seq_carteira;
+DROP SEQUENCE seq_criptoativo;
+DROP SEQUENCE seq_transacao;
+DROP SEQUENCE seq_relatorio;
+DROP SEQUENCE seq_alerta;
+DROP SEQUENCE seq_posicao;
+
+-- ============================================================================
+-- SEQUENCES
+-- ============================================================================
+CREATE SEQUENCE seq_titular     START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE seq_carteira    START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE seq_criptoativo START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE seq_transacao   START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE seq_relatorio   START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE seq_alerta      START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE seq_posicao     START WITH 1 INCREMENT BY 1 NOCACHE;
+
+-- ============================================================================
+-- CARTEIRA
+--   Relacionamento 1:1 com Titular: a FK fica em Titular (id_carteira UNIQUE).
+-- ============================================================================
+CREATE TABLE carteira (
+    id_carteira     NUMBER(10)      NOT NULL,
+    descricao       VARCHAR2(100)   NOT NULL,
+    CONSTRAINT pk_carteira PRIMARY KEY (id_carteira)
+);
+
+COMMENT ON TABLE  carteira              IS 'Carteira de investimentos - 1:1 com Titular';
+COMMENT ON COLUMN carteira.id_carteira  IS 'PK';
+COMMENT ON COLUMN carteira.descricao    IS 'Descricao livre da carteira';
+
+-- ============================================================================
+-- TITULAR (Usuario / Empresa via discriminador)
+--   PK: id_titular
+--   FK -> carteira (1:1, obrigatoria e unica)
+-- ============================================================================
+CREATE TABLE titular (
+    id_titular              NUMBER(10)      NOT NULL,
+    tipo_titular            CHAR(1)         NOT NULL,        -- 'U' = Usuario, 'E' = Empresa
+    nome                    VARCHAR2(150)   NOT NULL,
+    id_carteira             NUMBER(10)      NOT NULL,        -- FK -> carteira
+    -- Atributos exclusivos de Usuario (NULL para Empresa)
+    email                   VARCHAR2(150),
+    senha                   VARCHAR2(100),
+    cpf                     VARCHAR2(14),
+    autenticacao_2fa        CHAR(1)         DEFAULT 'N',
+    saldo_reais             NUMBER(15,2)    DEFAULT 0,
+    -- Atributos exclusivos de Empresa (NULL para Usuario)
+    cnpj                    VARCHAR2(18),
+    CONSTRAINT pk_titular PRIMARY KEY (id_titular),
+    CONSTRAINT uk_titular_carteira UNIQUE (id_carteira),
+    CONSTRAINT uk_titular_email    UNIQUE (email),
+    CONSTRAINT uk_titular_cpf      UNIQUE (cpf),
+    CONSTRAINT uk_titular_cnpj     UNIQUE (cnpj),
+    CONSTRAINT ck_titular_tipo     CHECK (tipo_titular IN ('U','E')),
+    CONSTRAINT ck_titular_2fa      CHECK (autenticacao_2fa IN ('S','N')),
+    CONSTRAINT ck_titular_usuario  CHECK (
+        (tipo_titular = 'U' AND email IS NOT NULL AND cpf IS NOT NULL AND cnpj IS NULL)
+     OR (tipo_titular = 'E' AND cnpj  IS NOT NULL AND email IS NULL AND cpf IS NULL)
+    ),
+    CONSTRAINT fk_titular_carteira FOREIGN KEY (id_carteira)
+        REFERENCES carteira (id_carteira)
+);
+
+COMMENT ON TABLE  titular                   IS 'Heranca single-table: Usuario (U) e Empresa (E)';
+COMMENT ON COLUMN titular.id_titular        IS 'PK';
+COMMENT ON COLUMN titular.tipo_titular      IS 'Discriminador: U=Usuario, E=Empresa';
+COMMENT ON COLUMN titular.id_carteira       IS 'FK -> carteira(id_carteira) - 1:1 obrigatoria';
+
+-- ============================================================================
+-- CRIPTOATIVO
+-- ============================================================================
+CREATE TABLE criptoativo (
+    id_cripto       NUMBER(10)      NOT NULL,
+    nome            VARCHAR2(80)    NOT NULL,
+    sigla           VARCHAR2(10)    NOT NULL,
+    preco_atual     NUMBER(18,8)    NOT NULL,
+    variacao_24h    NUMBER(10,4)    DEFAULT 0,
+    categoria       VARCHAR2(50),
+    CONSTRAINT pk_criptoativo       PRIMARY KEY (id_cripto),
+    CONSTRAINT uk_criptoativo_sigla UNIQUE (sigla),
+    CONSTRAINT ck_criptoativo_preco CHECK (preco_atual >= 0)
+);
+
+COMMENT ON COLUMN criptoativo.id_cripto IS 'PK';
+COMMENT ON COLUMN criptoativo.sigla     IS 'Sigla unica (BTC, ETH, etc.)';
+
+-- ============================================================================
+-- TRANSACAO (associativa em nivel de evento: Carteira x Criptoativo)
+--   PK: id_transacao
+--   FK -> carteira     (obrigatoria)
+--   FK -> criptoativo  (obrigatoria)
+-- ============================================================================
+CREATE TABLE transacao (
+    id_transacao    NUMBER(10)      NOT NULL,
+    id_carteira     NUMBER(10)      NOT NULL,        -- FK
+    id_cripto       NUMBER(10)      NOT NULL,        -- FK
+    tipo            VARCHAR2(10)    NOT NULL,
+    quantidade      NUMBER(18,8)    NOT NULL,
+    preco_unitario  NUMBER(18,8)    NOT NULL,
+    taxa            NUMBER(15,4)    NOT NULL,
+    data_operacao   DATE            NOT NULL,
+    CONSTRAINT pk_transacao         PRIMARY KEY (id_transacao),
+    CONSTRAINT ck_transacao_tipo    CHECK (tipo IN ('COMPRA','VENDA','CONVERSAO')),
+    CONSTRAINT ck_transacao_qtde    CHECK (quantidade > 0),
+    CONSTRAINT fk_transacao_carteira FOREIGN KEY (id_carteira)
+        REFERENCES carteira (id_carteira),
+    CONSTRAINT fk_transacao_cripto   FOREIGN KEY (id_cripto)
+        REFERENCES criptoativo (id_cripto)
+);
+
+COMMENT ON TABLE  transacao                 IS 'Evento de operacao - associativa Carteira x Criptoativo (nivel evento)';
+COMMENT ON COLUMN transacao.id_transacao    IS 'PK';
+COMMENT ON COLUMN transacao.id_carteira     IS 'FK -> carteira(id_carteira)';
+COMMENT ON COLUMN transacao.id_cripto       IS 'FK -> criptoativo(id_cripto)';
+
+CREATE INDEX idx_transacao_carteira ON transacao (id_carteira);
+CREATE INDEX idx_transacao_cripto   ON transacao (id_cripto);
+
+-- ============================================================================
+-- RELATORIO
+--   PK: id_relatorio
+--   FK -> carteira (N:1 obrigatoria)
+-- ============================================================================
+CREATE TABLE relatorio (
+    id_relatorio                NUMBER(10)      NOT NULL,
+    id_carteira                 NUMBER(10)      NOT NULL,    -- FK
+    data_geracao                DATE            NOT NULL,
+    valor_total_carteira        NUMBER(18,2),
+    total_investido             NUMBER(18,2),
+    total_taxas                 NUMBER(15,4),
+    rentabilidade_percentual    NUMBER(10,4),
+    CONSTRAINT pk_relatorio PRIMARY KEY (id_relatorio),
+    CONSTRAINT fk_relatorio_carteira FOREIGN KEY (id_carteira)
+        REFERENCES carteira (id_carteira)
+);
+
+COMMENT ON COLUMN relatorio.id_relatorio    IS 'PK';
+COMMENT ON COLUMN relatorio.id_carteira     IS 'FK -> carteira(id_carteira)';
+
+CREATE INDEX idx_relatorio_carteira ON relatorio (id_carteira);
+
+-- ============================================================================
+-- POSICAO (entidade associativa N:N: Carteira x Criptoativo - saldo agregado)
+--   PK: id_posicao
+--   UK: (id_carteira, id_cripto)  -- uma posicao por par
+-- ============================================================================
+CREATE TABLE posicao (
+    id_posicao                  NUMBER(10)      NOT NULL,
+    id_carteira                 NUMBER(10)      NOT NULL,    -- FK
+    id_cripto                   NUMBER(10)      NOT NULL,    -- FK
+    quantidade_atual            NUMBER(18,8)    NOT NULL,
+    preco_medio_compra          NUMBER(18,8)    NOT NULL,
+    data_primeira_aquisicao     DATE            NOT NULL,
+    data_ultima_atualizacao     DATE            NOT NULL,
+    CONSTRAINT pk_posicao PRIMARY KEY (id_posicao),
+    CONSTRAINT uk_posicao_carteira_cripto UNIQUE (id_carteira, id_cripto),
+    CONSTRAINT ck_posicao_qtde  CHECK (quantidade_atual >= 0),
+    CONSTRAINT fk_posicao_carteira FOREIGN KEY (id_carteira)
+        REFERENCES carteira (id_carteira),
+    CONSTRAINT fk_posicao_cripto   FOREIGN KEY (id_cripto)
+        REFERENCES criptoativo (id_cripto)
+);
+
+COMMENT ON TABLE  posicao                IS 'Associativa N:N Carteira x Criptoativo (saldo agregado)';
+COMMENT ON COLUMN posicao.id_posicao     IS 'PK';
+COMMENT ON COLUMN posicao.id_carteira    IS 'FK -> carteira(id_carteira)';
+COMMENT ON COLUMN posicao.id_cripto      IS 'FK -> criptoativo(id_cripto)';
+
+-- ============================================================================
+-- PARTICIPACAO (entidade associativa N:N: Usuario x Empresa - PK COMPOSTA)
+--   PK composta: (id_usuario, id_empresa)
+--   Ambos id_usuario e id_empresa referenciam titular.id_titular
+--   CHECKs garantem que id_usuario aponta para tipo 'U' e id_empresa para 'E'
+--   (validacao por trigger - PK e FK garantem integridade referencial basica)
+-- ============================================================================
+CREATE TABLE participacao (
+    id_usuario              NUMBER(10)      NOT NULL,        -- FK + parte da PK
+    id_empresa              NUMBER(10)      NOT NULL,        -- FK + parte da PK
+    percentual_participacao NUMBER(5,2)     NOT NULL,
+    cargo                   VARCHAR2(40)    NOT NULL,
+    data_entrada            DATE            NOT NULL,
+    ativo                   CHAR(1)         DEFAULT 'S' NOT NULL,
+    CONSTRAINT pk_participacao PRIMARY KEY (id_usuario, id_empresa),
+    CONSTRAINT ck_part_percent CHECK (percentual_participacao BETWEEN 0 AND 100),
+    CONSTRAINT ck_part_ativo   CHECK (ativo IN ('S','N')),
+    CONSTRAINT ck_part_cargo   CHECK (cargo IN ('SOCIO','ADMINISTRADOR','CONTADOR','DIRETOR')),
+    CONSTRAINT fk_part_usuario FOREIGN KEY (id_usuario)
+        REFERENCES titular (id_titular),
+    CONSTRAINT fk_part_empresa FOREIGN KEY (id_empresa)
+        REFERENCES titular (id_titular)
+);
+
+COMMENT ON TABLE  participacao              IS 'Associativa N:N Usuario x Empresa - PK COMPOSTA';
+COMMENT ON COLUMN participacao.id_usuario   IS 'PK composta + FK -> titular(id_titular) tipo U';
+COMMENT ON COLUMN participacao.id_empresa   IS 'PK composta + FK -> titular(id_titular) tipo E';
+
+CREATE INDEX idx_part_empresa ON participacao (id_empresa);
+
+-- Trigger para validar tipos do titular nas FKs
+CREATE OR REPLACE TRIGGER trg_part_valida_tipos
+BEFORE INSERT OR UPDATE ON participacao
+FOR EACH ROW
+DECLARE
+    v_tipo_user CHAR(1);
+    v_tipo_emp  CHAR(1);
+BEGIN
+    SELECT tipo_titular INTO v_tipo_user FROM titular WHERE id_titular = :NEW.id_usuario;
+    SELECT tipo_titular INTO v_tipo_emp  FROM titular WHERE id_titular = :NEW.id_empresa;
+    IF v_tipo_user <> 'U' THEN
+        RAISE_APPLICATION_ERROR(-20001, 'id_usuario deve referenciar titular do tipo U (Usuario).');
+    END IF;
+    IF v_tipo_emp <> 'E' THEN
+        RAISE_APPLICATION_ERROR(-20002, 'id_empresa deve referenciar titular do tipo E (Empresa).');
+    END IF;
+END;
+/
+
+-- ============================================================================
+-- ALERTA (entidade associativa N:N: Usuario x Criptoativo)
+--   PK: id_alerta
+--   FK -> titular (tipo U) + FK -> criptoativo
+-- ============================================================================
+CREATE TABLE alerta (
+    id_alerta           NUMBER(10)      NOT NULL,
+    id_usuario          NUMBER(10)      NOT NULL,            -- FK
+    id_cripto           NUMBER(10)      NOT NULL,            -- FK
+    limite_variacao     NUMBER(10,4)    NOT NULL,
+    ativado             CHAR(1)         DEFAULT 'S' NOT NULL,
+    data_configuracao   DATE            NOT NULL,
+    CONSTRAINT pk_alerta PRIMARY KEY (id_alerta),
+    CONSTRAINT ck_alerta_ativado CHECK (ativado IN ('S','N')),
+    CONSTRAINT ck_alerta_limite  CHECK (limite_variacao > 0),
+    CONSTRAINT fk_alerta_usuario FOREIGN KEY (id_usuario)
+        REFERENCES titular (id_titular),
+    CONSTRAINT fk_alerta_cripto  FOREIGN KEY (id_cripto)
+        REFERENCES criptoativo (id_cripto)
+);
+
+COMMENT ON TABLE  alerta                IS 'Associativa N:N Usuario x Criptoativo';
+COMMENT ON COLUMN alerta.id_alerta      IS 'PK';
+COMMENT ON COLUMN alerta.id_usuario     IS 'FK -> titular(id_titular) tipo U';
+COMMENT ON COLUMN alerta.id_cripto      IS 'FK -> criptoativo(id_cripto)';
+
+CREATE INDEX idx_alerta_usuario ON alerta (id_usuario);
+CREATE INDEX idx_alerta_cripto  ON alerta (id_cripto);
+
+-- Trigger para garantir que alerta pertence a um Usuario (tipo U)
+CREATE OR REPLACE TRIGGER trg_alerta_valida_usuario
+BEFORE INSERT OR UPDATE ON alerta
+FOR EACH ROW
+DECLARE
+    v_tipo CHAR(1);
+BEGIN
+    SELECT tipo_titular INTO v_tipo FROM titular WHERE id_titular = :NEW.id_usuario;
+    IF v_tipo <> 'U' THEN
+        RAISE_APPLICATION_ERROR(-20003, 'id_usuario deve referenciar titular do tipo U (Usuario).');
+    END IF;
+END;
+/
+
+-- ============================================================================
+-- DADOS DE EXEMPLO (espelham o Main.java)
+-- ============================================================================
+-- Carteiras
+INSERT INTO carteira (id_carteira, descricao) VALUES (seq_carteira.NEXTVAL, 'Carteira de Lucas');
+INSERT INTO carteira (id_carteira, descricao) VALUES (seq_carteira.NEXTVAL, 'Carteira - ABCD Investimentos');
+
+-- Usuario (titular tipo U)
+INSERT INTO titular (id_titular, tipo_titular, nome, id_carteira, email, senha, cpf, autenticacao_2fa, saldo_reais)
+VALUES (seq_titular.NEXTVAL, 'U', 'Lucas', 1, 'lucas@email.com', 'senha123', '123.456.789-00', 'S', 15000);
+
+-- Empresa (titular tipo E)
+INSERT INTO titular (id_titular, tipo_titular, nome, id_carteira, cnpj)
+VALUES (seq_titular.NEXTVAL, 'E', 'ABCD Investimentos', 2, '00.000.000/0001-00');
+
+-- Criptoativos
+INSERT INTO criptoativo (id_cripto, nome, sigla, preco_atual, variacao_24h, categoria)
+VALUES (seq_criptoativo.NEXTVAL, 'Bitcoin',  'BTC', 350000, 16.67, 'Moeda');
+INSERT INTO criptoativo (id_cripto, nome, sigla, preco_atual, variacao_24h, categoria)
+VALUES (seq_criptoativo.NEXTVAL, 'Ethereum', 'ETH', 16000,    6.67, 'Plataforma');
+
+-- Transacoes (id_carteira=1 da carteira do Lucas)
+INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao)
+VALUES (seq_transacao.NEXTVAL, 1, 1, 'COMPRA', 0.5, 300000, 150,  DATE '2026-05-07');
+INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao)
+VALUES (seq_transacao.NEXTVAL, 1, 2, 'COMPRA', 2.0, 15000,  30,   DATE '2026-05-07');
+INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao)
+VALUES (seq_transacao.NEXTVAL, 1, 1, 'VENDA',  0.1, 350000, 35,   DATE '2026-05-07');
+
+-- Relatorio
+INSERT INTO relatorio (id_relatorio, id_carteira, data_geracao, valor_total_carteira, total_investido, total_taxas, rentabilidade_percentual)
+VALUES (seq_relatorio.NEXTVAL, 1, DATE '2026-05-07', 172000, 207207, 242, -16.99);
+
+-- Alerta (associativa Usuario x Criptoativo)
+INSERT INTO alerta (id_alerta, id_usuario, id_cripto, limite_variacao, ativado, data_configuracao)
+VALUES (seq_alerta.NEXTVAL, 1, 1, 5.0, 'S', DATE '2026-05-07');
+
+-- Posicao (associativa Carteira x Criptoativo)
+INSERT INTO posicao (id_posicao, id_carteira, id_cripto, quantidade_atual, preco_medio_compra, data_primeira_aquisicao, data_ultima_atualizacao)
+VALUES (seq_posicao.NEXTVAL, 1, 1, 0.4, 300000, DATE '2026-05-07', DATE '2026-05-07');
+INSERT INTO posicao (id_posicao, id_carteira, id_cripto, quantidade_atual, preco_medio_compra, data_primeira_aquisicao, data_ultima_atualizacao)
+VALUES (seq_posicao.NEXTVAL, 1, 2, 2.0, 15000,  DATE '2026-05-07', DATE '2026-05-07');
+
+-- Participacao (associativa Usuario x Empresa - PK COMPOSTA)
+INSERT INTO participacao (id_usuario, id_empresa, percentual_participacao, cargo, data_entrada, ativo)
+VALUES (1, 2, 100, 'SOCIO', DATE '2026-05-07', 'S');
+
+COMMIT;
+
+-- ============================================================================
+-- CONSULTAS DE VALIDACAO
+-- ============================================================================
+-- SELECT * FROM titular;
+-- SELECT * FROM carteira;
+-- SELECT * FROM criptoativo;
+-- SELECT * FROM transacao;
+-- SELECT * FROM posicao;
+-- SELECT * FROM alerta;
+-- SELECT * FROM participacao;
+-- SELECT * FROM relatorio;

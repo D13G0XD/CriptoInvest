@@ -2,8 +2,8 @@ package com.criptoinvest.model;
 
 public class Relatorio {
 
-    private int idRelatorio;
-    private Carteira carteira;
+    private int idRelatorio;     // PK
+    private Carteira carteira;   // FK -> Carteira (idCarteira) - obrigatoria - relacionamento N:1
     private String dataGeracao;
     private double valorTotalCarteira;
     private double totalInvestido;

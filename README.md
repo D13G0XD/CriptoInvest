@@ -51,31 +51,70 @@ Todas as classes estão no pacote `com.criptoinvest.model`:
 
 ```
 src/com/criptoinvest/model/
-├── Titular.java      → Classe abstrata base para Usuario e Empresa
-├── Usuario.java      → Investidor pessoa física com 2FA e carteira própria
-├── Empresa.java      → Investidor pessoa jurídica (CNPJ) vinculado a um Usuario
-├── Carteira.java     → Agrupa transações e calcula valor total e rentabilidade
-├── Criptoativo.java  → Representa uma criptomoeda (BTC, ETH, etc.)
-├── Transacao.java    → Registro de compra, venda ou conversão (taxa de 0,1%)
-├── Relatorio.java    → Snapshot de desempenho de uma carteira em determinada data
-├── Alerta.java       → Monitora variação de preço e dispara quando ultrapassa o limite
-└── Main.java         → Ponto de entrada com demonstração de todas as funcionalidades
+├── Titular.java        → Classe abstrata base para Usuario e Empresa
+├── Usuario.java        → Investidor pessoa física com 2FA e carteira própria
+├── Empresa.java        → Investidor pessoa jurídica (CNPJ)
+├── Carteira.java       → Agrupa transações e calcula valor total e rentabilidade
+├── Criptoativo.java    → Representa uma criptomoeda (BTC, ETH, etc.)
+├── Transacao.java      → Registro de compra, venda ou conversão (taxa de 0,1%)
+├── Posicao.java        → Associativa Carteira ↔ Criptoativo (saldo agregado)
+├── Participacao.java   → Associativa Usuario ↔ Empresa (PK composta)
+├── Alerta.java         → Associativa Usuario ↔ Criptoativo (limite de variação)
+├── Relatorio.java      → Snapshot de desempenho de uma carteira em determinada data
+└── Main.java           → Ponto de entrada com demonstração de todas as funcionalidades
 ```
 
 ### Diagrama de Relacionamentos
 
 ```
-Titular   (abstract)
-├── Usuario   1 ──── * Empresa
-│             1 ──── 1 Carteira
-└── Empresa   * ──── 1 Usuario
-              1 ──── 1 Carteira
-
-Carteira  1 ──── * Transacao
-Transacao * ──── 1 Criptoativo
-Relatorio * ──── 1 Carteira
-Alerta    * ──── 1 Criptoativo
+                    Titular (abstract)
+                   /        \
+              Usuario       Empresa
+            (id PK)         (id PK)
+              │  │           │  │
+              │  └─ POSSUI ─ 1:1 ──┐ Carteira (idCarteira PK)
+              │                    │       │
+              │  ┌─ PARTICIPA ─────┘       │ AGRUPA (1:N)
+              │  │                          ▼
+        ┌─────┴──┴─────┐               Transacao (idTransacao PK)
+        │ Participacao │                    │ FK→Criptoativo
+        │ (PK composta)│                    │ FK→Carteira
+        │ FK→Usuario   │                    ▼
+        │ FK→Empresa   │               Criptoativo (idCripto PK)
+        └──────────────┘                    ▲      ▲
+                                            │      │
+              ┌─ MONITORA ─────────────┐    │      │
+              │                        │    │      │
+        ┌─────▼────────┐          ┌────┴────┴───┐  │
+        │ Alerta       │          │  Posicao    │  │
+        │ (idAlerta PK)│          │ (idPosicao  │  │
+        │ FK→Usuario   │          │  PK)        │  │
+        │ FK→Criptoativo│         │ FK→Carteira │  │
+        └──────────────┘          │ FK→Cripto   │  │
+                                  └─────────────┘  │
+                                                   │
+              Relatorio (idRelatorio PK) FK→Carteira
 ```
+
+#### Tabela de Relacionamentos
+
+| Origem      | Verbo            | Destino     | Cardinalidade | Obrigatoriedade               | Resolução                        |
+|-------------|------------------|-------------|---------------|-------------------------------|----------------------------------|
+| Titular     | POSSUI           | Carteira    | 1 : 1         | Obrigatório dos dois lados    | FK `idCarteira` em Titular       |
+| Carteira    | AGRUPA           | Transacao   | 1 : N         | Transacao obrigatória ter Carteira; Carteira pode estar vazia | FK `idCarteira` em Transacao |
+| Transacao   | REFERE-SE A      | Criptoativo | N : 1         | Transacao obrigatória ter Cripto | FK `idCripto` em Transacao    |
+| Relatorio   | RESUME           | Carteira    | N : 1         | Relatorio obrigatório ter Carteira | FK `idCarteira` em Relatorio |
+| **Usuario** | **PARTICIPA DE** | **Empresa** | **N : N**     | Resolvida por `Participacao`  | **Participacao** (PK composta `idUsuario+idEmpresa`) |
+| **Carteira**| **POSSUI**       | **Criptoativo** | **N : N** | Resolvida por `Posicao`       | **Posicao** (PK `idPosicao`, FKs `idCarteira`+`idCripto`) |
+| **Usuario** | **MONITORA**     | **Criptoativo** | **N : N** | Resolvida por `Alerta`        | **Alerta** (PK `idAlerta`, FKs `idUsuario`+`idCripto`) |
+
+#### Entidades Associativas — PK, FKs e Atributos próprios
+
+| Entidade        | PK                              | FKs                                  | Atributos próprios                                            |
+|-----------------|---------------------------------|--------------------------------------|---------------------------------------------------------------|
+| `Posicao`       | `idPosicao`                     | `idCarteira` → Carteira, `idCripto` → Criptoativo | `quantidadeAtual`, `precoMedioCompra`, `dataPrimeiraAquisicao`, `dataUltimaAtualizacao` |
+| `Participacao`  | Composta: `idUsuario`+`idEmpresa` | `idUsuario` → Usuario, `idEmpresa` → Empresa | `percentualParticipacao`, `cargo`, `dataEntrada`, `ativo`     |
+| `Alerta`        | `idAlerta`                      | `idUsuario` → Usuario, `idCripto` → Criptoativo | `limiteVariacao`, `ativado`, `dataConfiguracao`               |
 
 ## Conceitos de POO Aplicados
 

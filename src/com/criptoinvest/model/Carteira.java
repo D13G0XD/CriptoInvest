@@ -2,8 +2,9 @@ package com.criptoinvest.model;
 
 public class Carteira {
 
-    private int idCarteira;
+    private int idCarteira;          // PK
     private String descricao;
+    // Relacionamento 1:N com Transacao (transacoes pertencem a esta carteira)
     private Transacao[] transacoes;
     private int totalTransacoes;
 

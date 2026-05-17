@@ -2,7 +2,7 @@ package com.criptoinvest.model;
 
 public class Criptoativo {
 
-    private int idCripto;
+    private int idCripto;        // PK
     private String nome;
     private String sigla;
     private double precoAtual;

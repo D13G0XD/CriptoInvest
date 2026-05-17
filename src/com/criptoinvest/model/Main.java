@@ -95,13 +95,32 @@ public class Main {
             System.out.println("Erro ao gerar relatorio: " + e.getMessage());
         }
 
-        // --- Alerta ---
+        // --- Alerta (entidade associativa Usuario <-> Criptoativo) ---
         try {
-            Alerta alerta = new Alerta(1, btc, 5.0);
+            Alerta alerta = new Alerta(1, usuario, btc, 5.0, "2026-05-07");
             alerta.exibirDados();
 
         } catch (Exception e) {
             System.out.println("Erro ao criar alerta: " + e.getMessage());
+        }
+
+        // --- Posicao (entidade associativa Carteira <-> Criptoativo) ---
+        try {
+            Posicao posBtc = new Posicao(1, usuario.getCarteira(), btc, 0.5, 300000.00, "2026-05-07");
+            posBtc.aplicarVenda(0.1, "2026-05-07");
+            posBtc.exibirDados();
+
+        } catch (Exception e) {
+            System.out.println("Erro ao criar posicao: " + e.getMessage());
+        }
+
+        // --- Participacao (entidade associativa Usuario <-> Empresa, PK composta) ---
+        try {
+            Participacao participacao = new Participacao(usuario, empresa, 100.0, "SOCIO", "2026-05-07");
+            participacao.exibirDados();
+
+        } catch (Exception e) {
+            System.out.println("Erro ao criar participacao: " + e.getMessage());
         }
     }
 }

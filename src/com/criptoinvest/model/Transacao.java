@@ -1,10 +1,16 @@
 package com.criptoinvest.model;
 
+/**
+ * Transacao funciona tambem como entidade associativa em nivel de evento
+ * entre Carteira e Criptoativo (registro historico de cada operacao).
+ * A associativa Posicao agrega o saldo atual; Transacao guarda o evento.
+ */
 public class Transacao {
 
-    private int idTransacao;
-    private String tipo;
-    private Criptoativo criptoativo;
+    private int idTransacao;          // PK
+    private String tipo;              // COMPRA, VENDA, CONVERSAO
+    private Criptoativo criptoativo;  // FK -> Criptoativo (idCripto) - obrigatoria
+    // FK -> Carteira (idCarteira) - obrigatoria - atribuida via Carteira.registrarTransacao()
     private double quantidade;
     private double precoUnitario;
     private double taxa;
