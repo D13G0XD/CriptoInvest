@@ -7,8 +7,7 @@
 --   Target: Oracle Database 19c (ou superior)
 --
 -- Estrategia de heranca Titular -> (Usuario, Empresa):
---   "Single Table Inheritance" com discriminador 'tipo_titular' ('U' ou 'E').
---   Atributos especificos sao NULLABLE no nivel da tabela.
+--   "Joined Table Strategy" (tabela pai + tabelas filhas).
 -- ============================================================================
 
 -- Limpa objetos existentes (ordem reversa de dependencia)
@@ -18,6 +17,8 @@ DROP TABLE posicao           CASCADE CONSTRAINTS;
 DROP TABLE relatorio         CASCADE CONSTRAINTS;
 DROP TABLE transacao         CASCADE CONSTRAINTS;
 DROP TABLE criptoativo       CASCADE CONSTRAINTS;
+DROP TABLE usuario           CASCADE CONSTRAINTS;
+DROP TABLE empresa           CASCADE CONSTRAINTS;
 DROP TABLE titular           CASCADE CONSTRAINTS;
 DROP TABLE carteira          CASCADE CONSTRAINTS;
 
@@ -55,42 +56,61 @@ COMMENT ON COLUMN carteira.id_carteira  IS 'PK';
 COMMENT ON COLUMN carteira.descricao    IS 'Descricao livre da carteira';
 
 -- ============================================================================
--- TITULAR (Usuario / Empresa via discriminador)
+-- TITULAR (atributos compartilhados de Usuario/Empresa)
 --   PK: id_titular
 --   FK -> carteira (1:1, obrigatoria e unica)
 -- ============================================================================
 CREATE TABLE titular (
     id_titular              NUMBER(10)      NOT NULL,
-    tipo_titular            CHAR(1)         NOT NULL,        -- 'U' = Usuario, 'E' = Empresa
     nome                    VARCHAR2(150)   NOT NULL,
     id_carteira             NUMBER(10)      NOT NULL,        -- FK -> carteira
-    -- Atributos exclusivos de Usuario (NULL para Empresa)
-    email                   VARCHAR2(150),
-    senha                   VARCHAR2(100),
-    cpf                     VARCHAR2(14),
-    autenticacao_2fa        CHAR(1)         DEFAULT 'N',
-    saldo_reais             NUMBER(15,2)    DEFAULT 0,
-    -- Atributos exclusivos de Empresa (NULL para Usuario)
-    cnpj                    VARCHAR2(18),
     CONSTRAINT pk_titular PRIMARY KEY (id_titular),
     CONSTRAINT uk_titular_carteira UNIQUE (id_carteira),
-    CONSTRAINT uk_titular_email    UNIQUE (email),
-    CONSTRAINT uk_titular_cpf      UNIQUE (cpf),
-    CONSTRAINT uk_titular_cnpj     UNIQUE (cnpj),
-    CONSTRAINT ck_titular_tipo     CHECK (tipo_titular IN ('U','E')),
-    CONSTRAINT ck_titular_2fa      CHECK (autenticacao_2fa IN ('S','N')),
-    CONSTRAINT ck_titular_usuario  CHECK (
-        (tipo_titular = 'U' AND email IS NOT NULL AND cpf IS NOT NULL AND cnpj IS NULL)
-     OR (tipo_titular = 'E' AND cnpj  IS NOT NULL AND email IS NULL AND cpf IS NULL)
-    ),
     CONSTRAINT fk_titular_carteira FOREIGN KEY (id_carteira)
         REFERENCES carteira (id_carteira)
 );
 
-COMMENT ON TABLE  titular                   IS 'Heranca single-table: Usuario (U) e Empresa (E)';
+COMMENT ON TABLE  titular                   IS 'Tabela pai da heranca (Joined): atributos comuns de Usuario/Empresa';
 COMMENT ON COLUMN titular.id_titular        IS 'PK';
-COMMENT ON COLUMN titular.tipo_titular      IS 'Discriminador: U=Usuario, E=Empresa';
 COMMENT ON COLUMN titular.id_carteira       IS 'FK -> carteira(id_carteira) - 1:1 obrigatoria';
+
+-- ============================================================================
+-- USUARIO (filha de titular)
+--   PK/FK: id_usuario -> titular.id_titular
+-- ============================================================================
+CREATE TABLE usuario (
+    id_usuario              NUMBER(10)      NOT NULL,
+    email                   VARCHAR2(150)   NOT NULL,
+    senha                   VARCHAR2(100)   NOT NULL,
+    cpf                     VARCHAR2(14)    NOT NULL,
+    autenticacao_2fa        CHAR(1)         DEFAULT 'N',
+    saldo_reais             NUMBER(15,2)    DEFAULT 0,
+    CONSTRAINT pk_usuario PRIMARY KEY (id_usuario),
+    CONSTRAINT uk_usuario_email UNIQUE (email),
+    CONSTRAINT uk_usuario_cpf   UNIQUE (cpf),
+    CONSTRAINT ck_usuario_2fa   CHECK (autenticacao_2fa IN ('S','N')),
+    CONSTRAINT fk_usuario_titular FOREIGN KEY (id_usuario)
+        REFERENCES titular (id_titular)
+);
+
+COMMENT ON TABLE  usuario                   IS 'Tabela filha de Titular para Pessoa Fisica (Usuario)';
+COMMENT ON COLUMN usuario.id_usuario        IS 'PK/FK -> titular(id_titular)';
+
+-- ============================================================================
+-- EMPRESA (filha de titular)
+--   PK/FK: id_empresa -> titular.id_titular
+-- ============================================================================
+CREATE TABLE empresa (
+    id_empresa              NUMBER(10)      NOT NULL,
+    cnpj                    VARCHAR2(18)    NOT NULL,
+    CONSTRAINT pk_empresa PRIMARY KEY (id_empresa),
+    CONSTRAINT uk_empresa_cnpj UNIQUE (cnpj),
+    CONSTRAINT fk_empresa_titular FOREIGN KEY (id_empresa)
+        REFERENCES titular (id_titular)
+);
+
+COMMENT ON TABLE  empresa                   IS 'Tabela filha de Titular para Pessoa Juridica (Empresa)';
+COMMENT ON COLUMN empresa.id_empresa        IS 'PK/FK -> titular(id_titular)';
 
 -- ============================================================================
 -- CRIPTOATIVO
@@ -195,9 +215,8 @@ COMMENT ON COLUMN posicao.id_cripto      IS 'FK -> criptoativo(id_cripto)';
 -- ============================================================================
 -- PARTICIPACAO (entidade associativa N:N: Usuario x Empresa - PK COMPOSTA)
 --   PK composta: (id_usuario, id_empresa)
---   Ambos id_usuario e id_empresa referenciam titular.id_titular
---   CHECKs garantem que id_usuario aponta para tipo 'U' e id_empresa para 'E'
---   (validacao por trigger - PK e FK garantem integridade referencial basica)
+--   id_usuario referencia usuario.id_usuario
+--   id_empresa referencia empresa.id_empresa
 -- ============================================================================
 CREATE TABLE participacao (
     id_usuario              NUMBER(10)      NOT NULL,        -- FK + parte da PK
@@ -211,40 +230,21 @@ CREATE TABLE participacao (
     CONSTRAINT ck_part_ativo   CHECK (ativo IN ('S','N')),
     CONSTRAINT ck_part_cargo   CHECK (cargo IN ('SOCIO','ADMINISTRADOR','CONTADOR','DIRETOR')),
     CONSTRAINT fk_part_usuario FOREIGN KEY (id_usuario)
-        REFERENCES titular (id_titular),
+        REFERENCES usuario (id_usuario),
     CONSTRAINT fk_part_empresa FOREIGN KEY (id_empresa)
-        REFERENCES titular (id_titular)
+        REFERENCES empresa (id_empresa)
 );
 
 COMMENT ON TABLE  participacao              IS 'Associativa N:N Usuario x Empresa - PK COMPOSTA';
-COMMENT ON COLUMN participacao.id_usuario   IS 'PK composta + FK -> titular(id_titular) tipo U';
-COMMENT ON COLUMN participacao.id_empresa   IS 'PK composta + FK -> titular(id_titular) tipo E';
+COMMENT ON COLUMN participacao.id_usuario   IS 'PK composta + FK -> usuario(id_usuario)';
+COMMENT ON COLUMN participacao.id_empresa   IS 'PK composta + FK -> empresa(id_empresa)';
 
 CREATE INDEX idx_part_empresa ON participacao (id_empresa);
-
--- Trigger para validar tipos do titular nas FKs
-CREATE OR REPLACE TRIGGER trg_part_valida_tipos
-BEFORE INSERT OR UPDATE ON participacao
-FOR EACH ROW
-DECLARE
-    v_tipo_user CHAR(1);
-    v_tipo_emp  CHAR(1);
-BEGIN
-    SELECT tipo_titular INTO v_tipo_user FROM titular WHERE id_titular = :NEW.id_usuario;
-    SELECT tipo_titular INTO v_tipo_emp  FROM titular WHERE id_titular = :NEW.id_empresa;
-    IF v_tipo_user <> 'U' THEN
-        RAISE_APPLICATION_ERROR(-20001, 'id_usuario deve referenciar titular do tipo U (Usuario).');
-    END IF;
-    IF v_tipo_emp <> 'E' THEN
-        RAISE_APPLICATION_ERROR(-20002, 'id_empresa deve referenciar titular do tipo E (Empresa).');
-    END IF;
-END;
-/
 
 -- ============================================================================
 -- ALERTA (entidade associativa N:N: Usuario x Criptoativo)
 --   PK: id_alerta
---   FK -> titular (tipo U) + FK -> criptoativo
+--   FK -> usuario + FK -> criptoativo
 -- ============================================================================
 CREATE TABLE alerta (
     id_alerta           NUMBER(10)      NOT NULL,
@@ -257,32 +257,18 @@ CREATE TABLE alerta (
     CONSTRAINT ck_alerta_ativado CHECK (ativado IN ('S','N')),
     CONSTRAINT ck_alerta_limite  CHECK (limite_variacao > 0),
     CONSTRAINT fk_alerta_usuario FOREIGN KEY (id_usuario)
-        REFERENCES titular (id_titular),
+        REFERENCES usuario (id_usuario),
     CONSTRAINT fk_alerta_cripto  FOREIGN KEY (id_cripto)
         REFERENCES criptoativo (id_cripto)
 );
 
 COMMENT ON TABLE  alerta                IS 'Associativa N:N Usuario x Criptoativo';
 COMMENT ON COLUMN alerta.id_alerta      IS 'PK';
-COMMENT ON COLUMN alerta.id_usuario     IS 'FK -> titular(id_titular) tipo U';
+COMMENT ON COLUMN alerta.id_usuario     IS 'FK -> usuario(id_usuario)';
 COMMENT ON COLUMN alerta.id_cripto      IS 'FK -> criptoativo(id_cripto)';
 
 CREATE INDEX idx_alerta_usuario ON alerta (id_usuario);
 CREATE INDEX idx_alerta_cripto  ON alerta (id_cripto);
-
--- Trigger para garantir que alerta pertence a um Usuario (tipo U)
-CREATE OR REPLACE TRIGGER trg_alerta_valida_usuario
-BEFORE INSERT OR UPDATE ON alerta
-FOR EACH ROW
-DECLARE
-    v_tipo CHAR(1);
-BEGIN
-    SELECT tipo_titular INTO v_tipo FROM titular WHERE id_titular = :NEW.id_usuario;
-    IF v_tipo <> 'U' THEN
-        RAISE_APPLICATION_ERROR(-20003, 'id_usuario deve referenciar titular do tipo U (Usuario).');
-    END IF;
-END;
-/
 
 -- ============================================================================
 -- DADOS DE EXEMPLO (espelham o Main.java)
@@ -291,13 +277,17 @@ END;
 INSERT INTO carteira (id_carteira, descricao) VALUES (seq_carteira.NEXTVAL, 'Carteira de Lucas');
 INSERT INTO carteira (id_carteira, descricao) VALUES (seq_carteira.NEXTVAL, 'Carteira - ABCD Investimentos');
 
--- Usuario (titular tipo U)
-INSERT INTO titular (id_titular, tipo_titular, nome, id_carteira, email, senha, cpf, autenticacao_2fa, saldo_reais)
-VALUES (seq_titular.NEXTVAL, 'U', 'Lucas', 1, 'lucas@email.com', 'senha123', '123.456.789-00', 'S', 15000);
+-- Usuario (titular + usuario)
+INSERT INTO titular (id_titular, nome, id_carteira)
+VALUES (seq_titular.NEXTVAL, 'Lucas', 1);
+INSERT INTO usuario (id_usuario, email, senha, cpf, autenticacao_2fa, saldo_reais)
+VALUES (1, 'lucas@email.com', 'senha123', '123.456.789-00', 'S', 15000);
 
--- Empresa (titular tipo E)
-INSERT INTO titular (id_titular, tipo_titular, nome, id_carteira, cnpj)
-VALUES (seq_titular.NEXTVAL, 'E', 'ABCD Investimentos', 2, '00.000.000/0001-00');
+-- Empresa (titular + empresa)
+INSERT INTO titular (id_titular, nome, id_carteira)
+VALUES (seq_titular.NEXTVAL, 'ABCD Investimentos', 2);
+INSERT INTO empresa (id_empresa, cnpj)
+VALUES (2, '00.000.000/0001-00');
 
 -- Criptoativos
 INSERT INTO criptoativo (id_cripto, nome, sigla, preco_atual, variacao_24h, categoria)
@@ -337,6 +327,8 @@ COMMIT;
 -- CONSULTAS DE VALIDACAO
 -- ============================================================================
 -- SELECT * FROM titular;
+-- SELECT * FROM usuario;
+-- SELECT * FROM empresa;
 -- SELECT * FROM carteira;
 -- SELECT * FROM criptoativo;
 -- SELECT * FROM transacao;
