@@ -39,7 +39,14 @@ public class Posicao {
     public String getDataPrimeiraAquisicao() { return dataPrimeiraAquisicao; }
     public String getDataUltimaAtualizacao() { return dataUltimaAtualizacao; }
 
-    public void setQuantidadeAtual(double quantidadeAtual) { this.quantidadeAtual = quantidadeAtual; }
+    public void setQuantidadeAtual(double quantidadeAtual) {
+        // ck_posicao_qtde CHECK (quantidade_atual >= 0)
+        if (quantidadeAtual < 0) {
+            System.out.println("Erro: quantidade_atual nao pode ser negativa.");
+            return;
+        }
+        this.quantidadeAtual = quantidadeAtual;
+    }
     public void setPrecoMedioCompra(double precoMedioCompra) { this.precoMedioCompra = precoMedioCompra; }
     public void setDataUltimaAtualizacao(String data) { this.dataUltimaAtualizacao = data; }
 

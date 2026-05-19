@@ -8,9 +8,9 @@ package com.criptoinvest.model;
 public class Transacao {
 
     private int idTransacao;          // PK
-    private String tipo;              // COMPRA, VENDA, CONVERSAO
+    private Carteira carteira;        // FK -> Carteira (idCarteira) - obrigatoria (atribuida via Carteira.registrarTransacao)
     private Criptoativo criptoativo;  // FK -> Criptoativo (idCripto) - obrigatoria
-    // FK -> Carteira (idCarteira) - obrigatoria - atribuida via Carteira.registrarTransacao()
+    private String tipo;              // COMPRA, VENDA, CONVERSAO
     private double quantidade;
     private double precoUnitario;
     private double taxa;
@@ -21,10 +21,19 @@ public class Transacao {
 
         this.idTransacao = id;
         this.criptoativo = criptoativo;
-        this.quantidade = quantidade;
+
+        // ck_transacao_qtde CHECK (quantidade > 0)
+        if (quantidade <= 0) {
+            System.out.println("Aviso: quantidade deve ser positiva, ajustada para 1.");
+            this.quantidade = 1;
+        } else {
+            this.quantidade = quantidade;
+        }
+
         this.precoUnitario = criptoativo.getPrecoAtual();
         this.dataOperacao = dataOperacao;
 
+        // ck_transacao_tipo CHECK (tipo IN ('COMPRA','VENDA','CONVERSAO'))
         if (tipo.equals("COMPRA") || tipo.equals("VENDA") || tipo.equals("CONVERSAO")) {
             this.tipo = tipo;
 
@@ -42,6 +51,14 @@ public class Transacao {
 
     public void setIdTransacao(int idTransacao) {
         this.idTransacao = idTransacao;
+    }
+
+    public Carteira getCarteira() {
+        return carteira;
+    }
+
+    public void setCarteira(Carteira carteira) {
+        this.carteira = carteira;
     }
 
     public String getTipo() {

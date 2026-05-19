@@ -47,6 +47,11 @@ public class Criptoativo {
     }
 
     public void setPrecoAtual(double precoAtual) {
+        // ck_criptoativo_preco CHECK (preco_atual >= 0)
+        if (precoAtual < 0) {
+            System.out.println("Erro: preco_atual nao pode ser negativo.");
+            return;
+        }
         this.precoAtual = precoAtual;
     }
 
