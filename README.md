@@ -45,51 +45,87 @@ javac src/com/criptoinvest/model/*.java -d out/
 java -cp out/ com.criptoinvest.model.Main
 ```
 
+**Modelo relacional (Oracle):** o script DDL com tabelas, sequences, constraints e dados de exemplo está em `modelo/criptoinvest_ddl.sql`.
+
 ## Estrutura de Classes
 
 Todas as classes estão no pacote `com.criptoinvest.model`:
 
 ```
 src/com/criptoinvest/model/
-├── Titular.java      → Classe abstrata base para Usuario e Empresa
-├── Usuario.java      → Investidor pessoa física com 2FA e carteira própria
-├── Empresa.java      → Investidor pessoa jurídica (CNPJ) vinculado a um Usuario
-├── Carteira.java     → Agrupa transações e calcula valor total e rentabilidade
-├── Criptoativo.java  → Representa uma criptomoeda (BTC, ETH, etc.)
-├── Transacao.java    → Registro de compra, venda ou conversão (taxa de 0,1%)
-├── Relatorio.java    → Snapshot de desempenho de uma carteira em determinada data
-├── Alerta.java       → Monitora variação de preço e dispara quando ultrapassa o limite
-└── Main.java         → Ponto de entrada com demonstração de todas as funcionalidades
+├── Carteira.java       → Classe abstrata pai da herança (joined): saldo, transações, cálculos
+├── CarteiraPF.java     → Carteira de Pessoa Física (limite diário de saque)
+├── CarteiraPJ.java     → Carteira de Pessoa Jurídica (regime tributário)
+├── Usuario.java        → Pessoa Física: 1:1 com CarteiraPF, 1:N com Empresa
+├── Empresa.java        → Pessoa Jurídica: 1:1 com CarteiraPJ, N:1 com Usuario (dono)
+├── Criptoativo.java    → Representa uma criptomoeda (BTC, ETH, etc.)
+├── Transacao.java      → Registro de compra, venda ou conversão (taxa de 0,1%)
+├── Posicao.java        → Associativa Carteira ↔ Criptoativo (saldo agregado)
+├── Alerta.java         → Associativa Usuario ↔ Criptoativo (limite de variação)
+├── Relatorio.java      → Snapshot de desempenho de uma carteira em determinada data
+└── Main.java           → Ponto de entrada com demonstração de todas as funcionalidades
 ```
 
 ### Diagrama de Relacionamentos
 
 ```
-Titular   (abstract)
-├── Usuario   1 ──── * Empresa
-│             1 ──── 1 Carteira
-└── Empresa   * ──── 1 Usuario
-              1 ──── 1 Carteira
-
-Carteira  1 ──── * Transacao
-Transacao * ──── 1 Criptoativo
-Relatorio * ──── 1 Carteira
-Alerta    * ──── 1 Criptoativo
+                Carteira (abstract, tipo IN ('PF','PJ'))
+                /        \
+         CarteiraPF      CarteiraPJ
+        (limite saque)   (regime trib.)
+            ▲                 ▲
+            │ 1:1             │ 1:1
+            │                 │
+        Usuario ───POSSUI───► Empresa
+        (idUsuario PK)  1:N  (idEmpresa PK, FK→Usuario)
+            │                 │
+            │                 │ AGRUPA (1:N) ──► Transacao (FK→Carteira, FK→Criptoativo)
+            │ MONITORA (N:N)  │
+            │                 └─► Relatorio (FK→Carteira)
+            ▼                 └─► Posicao (FK→Carteira, FK→Criptoativo)
+         Alerta
+       (FK→Usuario,
+        FK→Criptoativo)         Criptoativo (idCripto PK)
 ```
+
+#### Tabela de Relacionamentos
+
+| Origem      | Verbo            | Destino     | Cardinalidade | Obrigatoriedade               | Resolução                        |
+|-------------|------------------|-------------|---------------|-------------------------------|----------------------------------|
+| Usuario     | POSSUI           | CarteiraPF  | 1 : 1         | Obrigatório dos dois lados    | FK `idCarteiraPF` em Usuario     |
+| Empresa     | POSSUI           | CarteiraPJ  | 1 : 1         | Obrigatório dos dois lados    | FK `idCarteiraPJ` em Empresa     |
+| Usuario     | POSSUI           | Empresa     | 1 : N         | Empresa obrigatória ter dono  | FK `idUsuario` em Empresa        |
+| Carteira    | AGRUPA           | Transacao   | 1 : N         | Transacao obrigatória ter Carteira; Carteira pode estar vazia | FK `idCarteira` em Transacao |
+| Transacao   | REFERE-SE A      | Criptoativo | N : 1         | Transacao obrigatória ter Cripto | FK `idCripto` em Transacao    |
+| Relatorio   | RESUME           | Carteira    | N : 1         | Relatorio obrigatório ter Carteira | FK `idCarteira` em Relatorio |
+| **Carteira**| **POSSUI**       | **Criptoativo** | **N : N** | Resolvida por `Posicao`       | **Posicao** (PK `idPosicao`, FKs `idCarteira`+`idCripto`) |
+| **Usuario** | **MONITORA**     | **Criptoativo** | **N : N** | Resolvida por `Alerta`        | **Alerta** (PK `idAlerta`, FKs `idUsuario`+`idCripto`) |
+
+#### Entidades Associativas — PK, FKs e Atributos próprios
+
+| Entidade    | PK            | FKs                                              | Atributos próprios                                            |
+|-------------|---------------|--------------------------------------------------|---------------------------------------------------------------|
+| `Posicao`   | `idPosicao`   | `idCarteira` → Carteira, `idCripto` → Criptoativo | `quantidadeAtual`, `precoMedioCompra`, `dataPrimeiraAquisicao`, `dataUltimaAtualizacao` |
+| `Alerta`    | `idAlerta`    | `idUsuario` → Usuario, `idCripto` → Criptoativo  | `limiteVariacao`, `ativado`, `dataConfiguracao`               |
+
+### Herança em `Carteira` (estratégia Joined)
+
+A herança foi modelada na **carteira**, não no titular: `Carteira` (pai abstrato) tem como filhas `CarteiraPF` e `CarteiraPJ`. No banco, isso vira três tabelas — `carteira` (atributos comuns + discriminador `tipo`), `carteira_pf` (PK/FK ligando-se à pai, com `limite_diario_saque`) e `carteira_pj` (PK/FK ligando-se à pai, com `regime_tributario`). Tabelas filhas como `transacao`, `posicao`, `relatorio` referenciam a tabela pai `carteira`, mantendo a FK polimórfica.
 
 ## Conceitos de POO Aplicados
 
 | Conceito | Implementação |
 |---|---|
-| **Encapsulamento** | Todos os campos são `private`, acessados via getters/setters |
-| **Herança** | `Usuario` e `Empresa` estendem `Titular` |
-| **Polimorfismo dinâmico** | `exibirDados()` abstrato em `Titular`, sobrescrito em cada subclasse |
+| **Encapsulamento** | Todos os campos são `private`/`protected`, acessados via getters/setters |
+| **Herança** | `CarteiraPF` e `CarteiraPJ` estendem `Carteira` (joined inheritance) |
+| **Polimorfismo dinâmico** | `getTipo()` abstrato em `Carteira`, sobrescrito nas filhas; `sacar()` sobrescrito em `CarteiraPF` para aplicar limite diário |
 | **Polimorfismo estático** | Sobrecarga de `depositar`, `registrarTransacao` e `atualizarPreco` |
 
 ## Tecnologias
 
 - **Linguagem:** Java SE
 - **JDK:** OpenJDK 26
+- **Banco de Dados:** Oracle 19c+ (DDL em `modelo/criptoinvest_ddl.sql`)
 
 ## Equipe VOLTZ
 
@@ -108,3 +144,4 @@ Alerta    * ──── 1 Criptoativo
 | Sprint 1 — Fase 1 | Escopo do Produto (Problema, Público-Alvo e Solução) |
 | Sprint 2 — Fase 2 | Classes Java + Diagrama de Classes |
 | Sprint 3 — Fase 3 | Encapsulamento, Herança, Polimorfismo e Classe Main |
+| Sprint 4 — Fase 4 | Modelo Relacional SQL (DDL Oracle, herança joined em Carteira) |

@@ -1,26 +1,39 @@
 package com.criptoinvest.model;
 
-public class Usuario extends Titular {
+/**
+ * Pessoa Fisica que opera no sistema.
+ * 1:1 obrigatorio com CarteiraPF; 1:N com Empresa (usuario possui empresas).
+ */
+public class Usuario {
 
+    private int id;                  // PK
+    private String nome;
+    private CarteiraPF carteira;     // FK 1:1 obrigatoria -> carteira_pf
     private String email;
     private String senha;
     private String cpf;
     private boolean autenticacaoDoisFatores;
-    private double saldoReais;
+
+    // Relacionamento 1:N com Empresa (usuario e dono de varias empresas)
     private Empresa[] empresas;
     private int totalEmpresas;
 
     public Usuario(int id, String nome, String email, String senha, String cpf) {
-        super(id, nome, new Carteira(id, "Carteira de " + nome));
+        this.id = id;
+        this.nome = nome;
+        this.carteira = new CarteiraPF(id, "Carteira PF de " + nome);
         this.email = email;
         this.senha = senha;
         this.cpf = cpf;
         this.autenticacaoDoisFatores = false;
-        this.saldoReais = 0;
         this.empresas = new Empresa[10];
         this.totalEmpresas = 0;
     }
 
+    public int getId() { return id; }
+    public String getNome() { return nome; }
+    public void setNome(String nome) { this.nome = nome; }
+    public CarteiraPF getCarteira() { return carteira; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
     public String getSenha() { return senha; }
@@ -29,63 +42,30 @@ public class Usuario extends Titular {
     public void setCpf(String cpf) { this.cpf = cpf; }
     public boolean isAutenticacaoDoisFatores() { return autenticacaoDoisFatores; }
     public void setAutenticacaoDoisFatores(boolean v) { this.autenticacaoDoisFatores = v; }
-    public double getSaldoReais() { return saldoReais; }
-    public void setSaldoReais(double saldoReais) { this.saldoReais = saldoReais; }
     public Empresa[] getEmpresas() { return empresas; }
     public int getTotalEmpresas() { return totalEmpresas; }
 
     public void ativar2FA() {
         this.autenticacaoDoisFatores = true;
-        System.out.println("2FA ativado para " + getNome());
+        System.out.println("2FA ativado para " + nome);
     }
 
-    public void depositar(double valor) {
-        if (valor <= 0) {
-            System.out.println("Erro: valor deve ser positivo.");
-            return;
-        }
-        this.saldoReais += valor;
-        System.out.println("Deposito de R$ " + valor + " realizado. Saldo: R$ " + saldoReais);
-    }
-
-    public void depositar(double valor, String descricao) {
-        if (valor <= 0) {
-            System.out.println("Erro: valor deve ser positivo.");
-            return;
-        }
-        this.saldoReais += valor;
-        System.out.println("Deposito de R$ " + valor + " (" + descricao + ") realizado. Saldo: R$ " + saldoReais);
-    }
-
-    public void sacar(double valor) {
-        if (valor <= 0) {
-            System.out.println("Erro: valor deve ser positivo.");
-            return;
-        }
-        if (valor > saldoReais) {
-            System.out.println("Erro: saldo insuficiente.");
-            return;
-        }
-        this.saldoReais -= valor;
-        System.out.println("Saque de R$ " + valor + " realizado. Saldo: R$ " + saldoReais);
-    }
-
+    /** Adiciona uma empresa de propriedade deste usuario (relacionamento 1:N). */
     public void adicionarEmpresa(Empresa empresa) {
         if (totalEmpresas < 10) {
-            empresa.setUsuario(this);
+            empresa.setDono(this);
             empresas[totalEmpresas] = empresa;
             totalEmpresas++;
         }
     }
 
-    @Override
     public void exibirDados() {
-        System.out.println("=== Usuario ===");
-        System.out.println("Nome: " + getNome());
+        System.out.println("=== Usuario (PF) ===");
+        System.out.println("Nome: " + nome);
         System.out.println("Email: " + email);
         System.out.println("CPF: " + cpf);
         System.out.println("2FA: " + autenticacaoDoisFatores);
-        System.out.println("Saldo em Reais: R$ " + saldoReais);
+        System.out.println("Saldo em Reais (carteira PF): R$ " + String.format("%.2f", carteira.getSaldoReais()));
         System.out.println("Empresas: " + totalEmpresas);
     }
 }

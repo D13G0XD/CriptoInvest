@@ -1,10 +1,16 @@
 package com.criptoinvest.model;
 
+/**
+ * Transacao funciona tambem como entidade associativa em nivel de evento
+ * entre Carteira e Criptoativo (registro historico de cada operacao).
+ * A associativa Posicao agrega o saldo atual; Transacao guarda o evento.
+ */
 public class Transacao {
 
-    private int idTransacao;
-    private String tipo;
-    private Criptoativo criptoativo;
+    private int idTransacao;          // PK
+    private Carteira carteira;        // FK -> Carteira (idCarteira) - obrigatoria (atribuida via Carteira.registrarTransacao)
+    private Criptoativo criptoativo;  // FK -> Criptoativo (idCripto) - obrigatoria
+    private String tipo;              // COMPRA, VENDA, CONVERSAO
     private double quantidade;
     private double precoUnitario;
     private double taxa;
@@ -15,10 +21,19 @@ public class Transacao {
 
         this.idTransacao = id;
         this.criptoativo = criptoativo;
-        this.quantidade = quantidade;
+
+        // ck_transacao_qtde CHECK (quantidade > 0)
+        if (quantidade <= 0) {
+            System.out.println("Aviso: quantidade deve ser positiva, ajustada para 1.");
+            this.quantidade = 1;
+        } else {
+            this.quantidade = quantidade;
+        }
+
         this.precoUnitario = criptoativo.getPrecoAtual();
         this.dataOperacao = dataOperacao;
 
+        // ck_transacao_tipo CHECK (tipo IN ('COMPRA','VENDA','CONVERSAO'))
         if (tipo.equals("COMPRA") || tipo.equals("VENDA") || tipo.equals("CONVERSAO")) {
             this.tipo = tipo;
 
@@ -36,6 +51,14 @@ public class Transacao {
 
     public void setIdTransacao(int idTransacao) {
         this.idTransacao = idTransacao;
+    }
+
+    public Carteira getCarteira() {
+        return carteira;
+    }
+
+    public void setCarteira(Carteira carteira) {
+        this.carteira = carteira;
     }
 
     public String getTipo() {
