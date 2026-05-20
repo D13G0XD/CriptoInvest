@@ -21,10 +21,18 @@ public class Alerta {
 
     public Alerta(int id, Usuario usuario, Criptoativo criptoativo,
                   double limiteVariacao, String dataConfiguracao) {
+        if (usuario == null || criptoativo == null) {
+            throw new IllegalArgumentException("Alerta exige usuario e criptoativo.");
+        }
         this.idAlerta = id;
         this.usuario = usuario;
         this.criptoativo = criptoativo;
-        this.limiteVariacao = limiteVariacao;
+        if (limiteVariacao <= 0) {
+            System.out.println("Aviso: limiteVariacao deve ser positivo, ajustado para 5%.");
+            this.limiteVariacao = 5.0;
+        } else {
+            this.limiteVariacao = limiteVariacao;
+        }
         this.dataConfiguracao = dataConfiguracao;
         this.ativado = true;
     }
@@ -42,7 +50,13 @@ public class Alerta {
     public void setAtivado(boolean ativado) { this.ativado = ativado; }
 
     public double getLimiteVariacao() { return limiteVariacao; }
-    public void setLimiteVariacao(double limiteVariacao) { this.limiteVariacao = limiteVariacao; }
+    public void setLimiteVariacao(double limiteVariacao) {
+        if (limiteVariacao <= 0) {
+            System.out.println("Erro: limiteVariacao deve ser positivo.");
+            return;
+        }
+        this.limiteVariacao = limiteVariacao;
+    }
 
     public String getDataConfiguracao() { return dataConfiguracao; }
     public void setDataConfiguracao(String dataConfiguracao) { this.dataConfiguracao = dataConfiguracao; }

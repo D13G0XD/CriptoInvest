@@ -77,7 +77,11 @@ public class Criptoativo {
             return;
         }
 
-        this.variacao24h = ((novoPreco - this.precoAtual) / this.precoAtual) * 100;
+        if (this.precoAtual == 0) {
+            this.variacao24h = 0;
+        } else {
+            this.variacao24h = ((novoPreco - this.precoAtual) / this.precoAtual) * 100;
+        }
         this.precoAtual = novoPreco;
     }
 
