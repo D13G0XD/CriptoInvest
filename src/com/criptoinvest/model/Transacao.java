@@ -8,21 +8,26 @@ package com.criptoinvest.model;
 public class Transacao {
 
     private int idTransacao;          // PK
-    private Carteira carteira;        // FK -> Carteira (idCarteira) - obrigatoria (atribuida via Carteira.registrarTransacao)
+    private Carteira carteira;        // FK -> Carteira (idCarteira) - atribuida via Carteira.registrarTransacao
     private Criptoativo criptoativo;  // FK -> Criptoativo (idCripto) - obrigatoria
-    private String tipo;              // COMPRA, VENDA, CONVERSAO
+    private String tipo;              // COMPRA, VENDA
     private double quantidade;
     private double precoUnitario;
-    private double taxa;
+    private double taxa;              // derivada de quantidade * precoUnitario * 0.1%
     private String dataOperacao;
+    private String observacao;
 
     public Transacao(int id, String tipo, Criptoativo criptoativo,
                      double quantidade, String dataOperacao) {
+        this(id, tipo, criptoativo, quantidade, criptoativo.getPrecoAtual(), dataOperacao);
+    }
+
+    public Transacao(int id, String tipo, Criptoativo criptoativo,
+                     double quantidade, double precoUnitario, String dataOperacao) {
 
         this.idTransacao = id;
         this.criptoativo = criptoativo;
 
-        // ck_transacao_qtde CHECK (quantidade > 0)
         if (quantidade <= 0) {
             System.out.println("Aviso: quantidade deve ser positiva, ajustada para 1.");
             this.quantidade = 1;
@@ -30,107 +35,80 @@ public class Transacao {
             this.quantidade = quantidade;
         }
 
-        this.precoUnitario = criptoativo.getPrecoAtual();
+        if (precoUnitario < 0) {
+            System.out.println("Aviso: precoUnitario negativo, usando precoAtual do criptoativo.");
+            this.precoUnitario = criptoativo.getPrecoAtual();
+        } else {
+            this.precoUnitario = precoUnitario;
+        }
+
         this.dataOperacao = dataOperacao;
 
-        // ck_transacao_tipo CHECK (tipo IN ('COMPRA','VENDA','CONVERSAO'))
-        if (tipo.equals("COMPRA") || tipo.equals("VENDA") || tipo.equals("CONVERSAO")) {
+        if ("COMPRA".equals(tipo) || "VENDA".equals(tipo)) {
             this.tipo = tipo;
-
         } else {
             System.out.println("Aviso: tipo invalido, definido como COMPRA.");
             this.tipo = "COMPRA";
         }
 
+        recalcularTaxa();
+    }
+
+    private void recalcularTaxa() {
         this.taxa = calcularValorBruto() * 0.001;
     }
 
-    public int getIdTransacao() {
-        return idTransacao;
-    }
+    public int getIdTransacao() { return idTransacao; }
+    public void setIdTransacao(int idTransacao) { this.idTransacao = idTransacao; }
 
-    public void setIdTransacao(int idTransacao) {
-        this.idTransacao = idTransacao;
-    }
+    public Carteira getCarteira() { return carteira; }
+    public void setCarteira(Carteira carteira) { this.carteira = carteira; }
 
-    public Carteira getCarteira() {
-        return carteira;
-    }
+    public String getTipo() { return tipo; }
 
-    public void setCarteira(Carteira carteira) {
-        this.carteira = carteira;
-    }
+    public Criptoativo getCriptoativo() { return criptoativo; }
 
-    public String getTipo() {
-        return tipo;
-    }
-
-    public void setTipo(String tipo) {
-        this.tipo = tipo;
-    }
-
-    public Criptoativo getCriptoativo() {
-        return criptoativo;
-    }
-
-    public void setCriptoativo(Criptoativo criptoativo) {
-        this.criptoativo = criptoativo;
-    }
-
-    public double getQuantidade() {
-        return quantidade;
-    }
-
+    public double getQuantidade() { return quantidade; }
     public void setQuantidade(double quantidade) {
+        if (quantidade <= 0) {
+            System.out.println("Erro: quantidade deve ser positiva.");
+            return;
+        }
         this.quantidade = quantidade;
+        recalcularTaxa();
     }
 
-    public double getPrecoUnitario() {
-        return precoUnitario;
-    }
-
+    public double getPrecoUnitario() { return precoUnitario; }
     public void setPrecoUnitario(double precoUnitario) {
+        if (precoUnitario < 0) {
+            System.out.println("Erro: precoUnitario nao pode ser negativo.");
+            return;
+        }
         this.precoUnitario = precoUnitario;
+        recalcularTaxa();
     }
 
-    public double getTaxa() {
-        return taxa;
-    }
+    public double getTaxa() { return taxa; }
 
-    public void setTaxa(double taxa) {
-        this.taxa = taxa;
-    }
+    public String getDataOperacao() { return dataOperacao; }
+    public void setDataOperacao(String dataOperacao) { this.dataOperacao = dataOperacao; }
 
-    public String getDataOperacao() {
-        return dataOperacao;
-    }
-
-    public void setDataOperacao(String dataOperacao) {
-        this.dataOperacao = dataOperacao;
-    }
+    public String getObservacao() { return observacao; }
+    public void setObservacao(String observacao) { this.observacao = observacao; }
 
     public double calcularValorBruto() {
         return quantidade * precoUnitario;
     }
 
     public double calcularValorComTaxa() {
-        if (tipo.equals("COMPRA")) {
+        if ("COMPRA".equals(tipo)) {
             return calcularValorBruto() + taxa;
         }
-
         return calcularValorBruto() - taxa;
     }
 
     public double calcularValorAtual() {
         return quantidade * criptoativo.getPrecoAtual();
-    }
-
-    public double calcularLucro() {
-        if (tipo.equals("COMPRA")) {
-            return calcularValorAtual() - calcularValorComTaxa();
-        }
-
-        return 0;
     }
 
     public void exibirDados() {
@@ -143,10 +121,8 @@ public class Transacao {
         System.out.println("Taxa (0.1%): R$ " + String.format("%.2f", taxa));
         System.out.println("Valor Liquido: R$ " + String.format("%.2f", calcularValorComTaxa()));
         System.out.println("Data: " + dataOperacao);
-
-        if (tipo.equals("COMPRA")) {
-            System.out.println("Valor Atual: R$ " + String.format("%.2f", calcularValorAtual()));
-            System.out.println("Lucro: R$ " + String.format("%.2f", calcularLucro()));
+        if (observacao != null) {
+            System.out.println("Observacao: " + observacao);
         }
     }
 }
