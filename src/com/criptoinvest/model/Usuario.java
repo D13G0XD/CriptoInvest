@@ -1,5 +1,8 @@
 package com.criptoinvest.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Pessoa Fisica que opera no sistema.
  * 1:1 obrigatorio com CarteiraPF; 1:N com Empresa (usuario possui empresas).
@@ -14,20 +17,22 @@ public class Usuario {
     private String cpf;
     private boolean autenticacaoDoisFatores;
 
-    // Relacionamento 1:N com Empresa (usuario e dono de varias empresas)
-    private Empresa[] empresas;
-    private int totalEmpresas;
+    private List<Empresa> empresas;
 
-    public Usuario(int id, String nome, String email, String senha, String cpf) {
+    public Usuario(int id, String nome, String email, String senha, String cpf,
+                   double saldoInicial, double limiteDiarioSaque) {
         this.id = id;
         this.nome = nome;
-        this.carteira = new CarteiraPF(id, "Carteira PF de " + nome);
+        this.carteira = new CarteiraPF(id, "Carteira PF de " + nome, saldoInicial, limiteDiarioSaque);
         this.email = email;
         this.senha = senha;
         this.cpf = cpf;
         this.autenticacaoDoisFatores = false;
-        this.empresas = new Empresa[10];
-        this.totalEmpresas = 0;
+        this.empresas = new ArrayList<>();
+    }
+
+    public Usuario(int id, String nome, String email, String senha, String cpf) {
+        this(id, nome, email, senha, cpf, 0, 5000);
     }
 
     public int getId() { return id; }
@@ -42,21 +47,17 @@ public class Usuario {
     public void setCpf(String cpf) { this.cpf = cpf; }
     public boolean isAutenticacaoDoisFatores() { return autenticacaoDoisFatores; }
     public void setAutenticacaoDoisFatores(boolean v) { this.autenticacaoDoisFatores = v; }
-    public Empresa[] getEmpresas() { return empresas; }
-    public int getTotalEmpresas() { return totalEmpresas; }
+    public List<Empresa> getEmpresas() { return empresas; }
+    public int getTotalEmpresas() { return empresas.size(); }
 
     public void ativar2FA() {
         this.autenticacaoDoisFatores = true;
         System.out.println("2FA ativado para " + nome);
     }
 
-    /** Adiciona uma empresa de propriedade deste usuario (relacionamento 1:N). */
     public void adicionarEmpresa(Empresa empresa) {
-        if (totalEmpresas < 10) {
-            empresa.setDono(this);
-            empresas[totalEmpresas] = empresa;
-            totalEmpresas++;
-        }
+        if (empresa == null || empresas.contains(empresa)) return;
+        empresas.add(empresa);
     }
 
     public void exibirDados() {
@@ -66,6 +67,6 @@ public class Usuario {
         System.out.println("CPF: " + cpf);
         System.out.println("2FA: " + autenticacaoDoisFatores);
         System.out.println("Saldo em Reais (carteira PF): R$ " + String.format("%.2f", carteira.getSaldoReais()));
-        System.out.println("Empresas: " + totalEmpresas);
+        System.out.println("Empresas: " + empresas.size());
     }
 }

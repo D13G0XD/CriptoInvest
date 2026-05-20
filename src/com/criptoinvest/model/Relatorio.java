@@ -7,7 +7,9 @@ public class Relatorio {
     private String dataGeracao;
     private double valorTotalCarteira;
     private double totalInvestido;
+    private double totalVendido;
     private double totalTaxas;
+    private double lucroTotal;
     private double rentabilidadePercentual;
 
     public Relatorio(int id, Carteira carteira, String dataGeracao) {
@@ -16,7 +18,9 @@ public class Relatorio {
         this.dataGeracao = dataGeracao;
         this.valorTotalCarteira = carteira.calcularValorTotal();
         this.totalInvestido = carteira.calcularTotalInvestido();
+        this.totalVendido = carteira.calcularTotalVendido();
         this.totalTaxas = carteira.calcularTotalTaxas();
+        this.lucroTotal = carteira.calcularLucroTotal();
         this.rentabilidadePercentual = carteira.calcularRentabilidade();
     }
 
@@ -76,8 +80,11 @@ public class Relatorio {
         this.rentabilidadePercentual = rentabilidadePercentual;
     }
 
+    public double getTotalVendido() { return totalVendido; }
+    public double getLucroTotal() { return lucroTotal; }
+
     public double calcularLucroLiquido() {
-        return valorTotalCarteira - totalInvestido;
+        return lucroTotal;
     }
 
     public String gerarResumo() {
@@ -85,9 +92,10 @@ public class Relatorio {
                 "Data: " + dataGeracao + "\n" +
                 "Carteira: " + carteira.getDescricao() + "\n" +
                 "Total Investido: R$ " + String.format("%.2f", totalInvestido) + "\n" +
+                "Total Vendido: R$ " + String.format("%.2f", totalVendido) + "\n" +
                 "Valor Atual: R$ " + String.format("%.2f", valorTotalCarteira) + "\n" +
                 "Taxas Pagas: R$ " + String.format("%.2f", totalTaxas) + "\n" +
-                "Lucro Liquido: R$ " + String.format("%.2f", calcularLucroLiquido()) + "\n" +
+                "Lucro Total: R$ " + String.format("%.2f", lucroTotal) + "\n" +
                 "Rentabilidade: " + String.format("%.2f", rentabilidadePercentual) + "%\n";
     }
 

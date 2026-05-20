@@ -23,7 +23,6 @@ public class Main {
         Usuario usuario;
         try {
             usuario = new Usuario(1, "Lucas", "lucas@email.com", "senha123", "123.456.789-00");
-            // depositos vao para a CARTEIRA (nao mais no usuario)
             usuario.getCarteira().depositar(10000.00);
             usuario.getCarteira().depositar(5000.00, "Aporte mensal");
             usuario.ativar2FA();
@@ -33,10 +32,10 @@ public class Main {
             return;
         }
 
-        // --- Empresa (carteira PJ criada automaticamente) ---
+        // --- Empresa (carteira PJ criada automaticamente; dono obrigatorio) ---
         Empresa empresa;
         try {
-            empresa = new Empresa(2, "ABCD Investimentos", "00.000.000/0001-00", "LUCRO_PRESUMIDO");
+            empresa = new Empresa(2, "ABCD Investimentos", "00.000.000/0001-00", "LUCRO_PRESUMIDO", usuario);
             usuario.adicionarEmpresa(empresa);
             empresa.getCarteira().depositar(50000.00, "Capital inicial");
             empresa.exibirDados();
@@ -57,7 +56,7 @@ public class Main {
             System.out.println("Erro no polimorfismo: " + e.getMessage());
         }
 
-        // --- Transacoes na carteira PF do usuario ---
+        // --- Transacoes na carteira PF do usuario (Posicao atualizada automaticamente) ---
         try {
             Transacao t1 = new Transacao(1, "COMPRA", btc, 0.5, "2026-05-07");
             Transacao t2 = new Transacao(2, "COMPRA", eth, 2.0, "2026-05-07");
@@ -83,13 +82,22 @@ public class Main {
             System.out.println("Erro ao registrar transacao PJ: " + e.getMessage());
         }
 
-        // --- Saque com restricao de limite na CarteiraPF ---
+        // --- Saque com restricao de limite diario ACUMULADO na CarteiraPF ---
         try {
-            System.out.println("\n--- Teste de limite de saque PF ---");
-            usuario.getCarteira().sacar(3000.00);    // ok
-            usuario.getCarteira().sacar(10000.00);   // estoura limite diario
+            System.out.println("\n--- Teste de limite de saque PF (limite diario R$ 5000) ---");
+            usuario.getCarteira().sacar(3000.00);   // ok, acumulado=3000
+            usuario.getCarteira().sacar(2500.00);   // estoura: 3000+2500=5500 > 5000
+            usuario.getCarteira().sacar(1500.00);   // ok: 3000+1500=4500
         } catch (Exception e) {
             System.out.println("Erro no saque: " + e.getMessage());
+        }
+
+        // --- Resumo da carteira PF (metricas corrigidas) ---
+        try {
+            System.out.println();
+            usuario.getCarteira().exibirResumo();
+        } catch (Exception e) {
+            System.out.println("Erro ao exibir resumo: " + e.getMessage());
         }
 
         // --- Relatorio (sobre a carteira PF do Lucas) ---
@@ -108,13 +116,16 @@ public class Main {
             System.out.println("Erro ao criar alerta: " + e.getMessage());
         }
 
-        // --- Posicao (Carteira x Criptoativo) ---
+        // --- Posicao (gerenciada automaticamente pela carteira) ---
         try {
-            Posicao posBtc = new Posicao(1, usuario.getCarteira(), btc, 0.5, 300000.00, "2026-05-07");
-            posBtc.aplicarVenda(0.1, "2026-05-07");
-            posBtc.exibirDados();
+            Posicao posBtc = usuario.getCarteira().buscarPosicao("BTC");
+            if (posBtc != null) {
+                posBtc.exibirDados();
+            } else {
+                System.out.println("Nenhuma posicao em BTC.");
+            }
         } catch (Exception e) {
-            System.out.println("Erro ao criar posicao: " + e.getMessage());
+            System.out.println("Erro ao exibir posicao: " + e.getMessage());
         }
     }
 }
