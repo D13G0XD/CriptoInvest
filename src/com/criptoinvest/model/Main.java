@@ -32,18 +32,26 @@ public class Main {
         mapCriptoativos.put(btc.getSigla(), btc);
         mapCriptoativos.put(eth.getSigla(), eth);
 
-        // --- Usuario (carteira PF criada automaticamente) ---
+        // --- Usuarios ---
         Usuario usuario;
+        Usuario usuario2;
         try {
-            usuario = new Usuario(1, "Lucas", "lucas@email.com", "senha123", "123.456.789-00");
+            usuario  = new Usuario(1, "Lucas",   "lucas@email.com",   "senha123", "123.456.789-00");
+            usuario2 = new Usuario(2, "Ana",     "ana@email.com",     "senha456", "987.654.321-00");
             usuario.getCarteira().depositar(10000.00);
             usuario.getCarteira().depositar(5000.00, "Aporte mensal");
             usuario.ativar2FA();
             usuario.exibirDados();
+            usuario2.exibirDados();
         } catch (Exception e) {
             System.out.println("Erro ao criar usuario: " + e.getMessage());
             return;
         }
+
+        // --- HashMap de Usuarios (id -> Usuario) ---
+        HashMap<Integer, Usuario> mapUsuarios = new HashMap<>();
+        mapUsuarios.put(usuario.getId(),  usuario);
+        mapUsuarios.put(usuario2.getId(), usuario2);
 
         // --- Empresa (carteira PJ criada automaticamente; dono obrigatorio) ---
         Empresa empresa;
@@ -191,6 +199,20 @@ public class Main {
             System.out.println("Erro ao gravar posicoes_pf.txt: " + e.getMessage());
         }
 
+        // --- CRIACAO: gravar HashMap de Usuarios em arquivo ---
+        System.out.println("\n--- Gravando usuarios.txt (HashMap) ---");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("usuarios.txt"))) {
+            for (Map.Entry<Integer, Usuario> entrada : mapUsuarios.entrySet()) {
+                Usuario u = entrada.getValue();
+                bw.write(u.getId() + "|" + u.getNome() + "|" + u.getEmail() + "|"
+                        + u.getCpf() + "|" + u.isAutenticacaoDoisFatores());
+                bw.newLine();
+            }
+            System.out.println("Arquivo usuarios.txt criado com " + mapUsuarios.size() + " registro(s).");
+        } catch (IOException e) {
+            System.out.println("Erro ao gravar usuarios.txt: " + e.getMessage());
+        }
+
         // --- CRIACAO: gravar ArrayList de Empresas do Usuario em arquivo ---
         System.out.println("\n--- Gravando empresas.txt (ArrayList) ---");
         try (BufferedWriter bw = new BufferedWriter(new FileWriter("empresas.txt"))) {
@@ -238,6 +260,41 @@ public class Main {
             System.out.println("Arquivo criptoativos.txt atualizado com " + mapCriptoativos.size() + " registro(s).");
         } catch (IOException e) {
             System.out.println("Erro ao regravar criptoativos.txt: " + e.getMessage());
+        }
+
+        // --- ATUALIZACAO: ler usuarios.txt e atualizar emails no HashMap ---
+        System.out.println("\n--- Lendo usuarios.txt e atualizando emails no HashMap ---");
+        try (BufferedReader br = new BufferedReader(new FileReader("usuarios.txt"))) {
+            String linha;
+            while ((linha = br.readLine()) != null) {
+                String[] campos   = linha.split("\\|");
+                int id            = Integer.parseInt(campos[0]);
+                String emailVelho = campos[2];
+                String emailNovo  = "novo." + emailVelho;
+                Usuario u = mapUsuarios.get(id);
+                if (u != null) {
+                    u.setEmail(emailNovo);
+                    System.out.println("Atualizado: Usuario " + u.getNome()
+                            + " | Email anterior: " + emailVelho
+                            + " -> Novo email: " + u.getEmail());
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Erro ao ler usuarios.txt: " + e.getMessage());
+        }
+
+        // --- ATUALIZACAO: regravar usuarios.txt com emails atualizados ---
+        System.out.println("\n--- Regravando usuarios.txt com emails atualizados ---");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("usuarios.txt"))) {
+            for (Map.Entry<Integer, Usuario> entrada : mapUsuarios.entrySet()) {
+                Usuario u = entrada.getValue();
+                bw.write(u.getId() + "|" + u.getNome() + "|" + u.getEmail() + "|"
+                        + u.getCpf() + "|" + u.isAutenticacaoDoisFatores());
+                bw.newLine();
+            }
+            System.out.println("Arquivo usuarios.txt atualizado com " + mapUsuarios.size() + " registro(s).");
+        } catch (IOException e) {
+            System.out.println("Erro ao regravar usuarios.txt: " + e.getMessage());
         }
     }
 }
