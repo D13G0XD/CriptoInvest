@@ -1,5 +1,13 @@
 package com.criptoinvest.model;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -18,6 +26,11 @@ public class Main {
             System.out.println("Erro ao criar criptoativos: " + e.getMessage());
             return;
         }
+
+        // --- HashMap de Criptoativos (sigla -> Criptoativo) ---
+        HashMap<String, Criptoativo> mapCriptoativos = new HashMap<>();
+        mapCriptoativos.put(btc.getSigla(), btc);
+        mapCriptoativos.put(eth.getSigla(), eth);
 
         // --- Usuario (carteira PF criada automaticamente) ---
         Usuario usuario;
@@ -126,6 +139,105 @@ public class Main {
             }
         } catch (Exception e) {
             System.out.println("Erro ao exibir posicao: " + e.getMessage());
+        }
+
+        // =====================================================================
+        // PERSISTENCIA EM ARQUIVOS DE TEXTO
+        // =====================================================================
+
+        // --- CRIACAO: gravar HashMap de Criptoativos em arquivo ---
+        System.out.println("\n--- Gravando criptoativos.txt (HashMap) ---");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("criptoativos.txt"))) {
+            for (Map.Entry<String, Criptoativo> entrada : mapCriptoativos.entrySet()) {
+                Criptoativo c = entrada.getValue();
+                bw.write(c.getIdCripto() + "|" + c.getNome() + "|" + c.getSigla() + "|"
+                        + c.getPrecoAtual() + "|" + c.getVariacao24h() + "|" + c.getCategoria());
+                bw.newLine();
+            }
+            System.out.println("Arquivo criptoativos.txt criado com " + mapCriptoativos.size() + " registro(s).");
+        } catch (IOException e) {
+            System.out.println("Erro ao gravar criptoativos.txt: " + e.getMessage());
+        }
+
+        // --- CRIACAO: gravar ArrayList de Transacoes (carteira PF) em arquivo ---
+        System.out.println("\n--- Gravando transacoes_pf.txt (ArrayList) ---");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("transacoes_pf.txt"))) {
+            for (Transacao t : usuario.getCarteira().getTransacoes()) {
+                String obs = t.getObservacao() != null ? t.getObservacao() : "";
+                bw.write(t.getIdTransacao() + "|" + t.getTipo() + "|"
+                        + t.getCriptoativo().getSigla() + "|" + t.getQuantidade() + "|"
+                        + t.getPrecoUnitario() + "|" + t.getTaxa() + "|"
+                        + t.getDataOperacao() + "|" + obs);
+                bw.newLine();
+            }
+            System.out.println("Arquivo transacoes_pf.txt criado com "
+                    + usuario.getCarteira().getTotalTransacoes() + " registro(s).");
+        } catch (IOException e) {
+            System.out.println("Erro ao gravar transacoes_pf.txt: " + e.getMessage());
+        }
+
+        // --- CRIACAO: gravar ArrayList de Posicoes (carteira PF) em arquivo ---
+        System.out.println("\n--- Gravando posicoes_pf.txt (ArrayList) ---");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("posicoes_pf.txt"))) {
+            for (Posicao p : usuario.getCarteira().getPosicoes()) {
+                bw.write(p.getIdPosicao() + "|" + p.getCriptoativo().getSigla() + "|"
+                        + p.getQuantidadeAtual() + "|" + p.getPrecoMedioCompra() + "|"
+                        + p.getDataPrimeiraAquisicao() + "|" + p.getDataUltimaAtualizacao());
+                bw.newLine();
+            }
+            System.out.println("Arquivo posicoes_pf.txt criado com "
+                    + usuario.getCarteira().getPosicoes().size() + " registro(s).");
+        } catch (IOException e) {
+            System.out.println("Erro ao gravar posicoes_pf.txt: " + e.getMessage());
+        }
+
+        // --- CRIACAO: gravar ArrayList de Empresas do Usuario em arquivo ---
+        System.out.println("\n--- Gravando empresas.txt (ArrayList) ---");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("empresas.txt"))) {
+            for (Empresa emp : usuario.getEmpresas()) {
+                bw.write(emp.getId() + "|" + emp.getNome() + "|" + emp.getCnpj() + "|"
+                        + emp.getCarteira().getRegimeTributario() + "|" + emp.getDono().getNome());
+                bw.newLine();
+            }
+            System.out.println("Arquivo empresas.txt criado com "
+                    + usuario.getTotalEmpresas() + " registro(s).");
+        } catch (IOException e) {
+            System.out.println("Erro ao gravar empresas.txt: " + e.getMessage());
+        }
+
+        // --- ATUALIZACAO: ler criptoativos.txt e atualizar precos no HashMap ---
+        System.out.println("\n--- Lendo criptoativos.txt e atualizando HashMap com variacao de +5% ---");
+        try (BufferedReader br = new BufferedReader(new FileReader("criptoativos.txt"))) {
+            String linha;
+            while ((linha = br.readLine()) != null) {
+                String[] campos = linha.split("\\|");
+                String sigla     = campos[2];
+                double precoBase = Double.parseDouble(campos[3]);
+                double novoPreco = precoBase * 1.05;
+                Criptoativo c = mapCriptoativos.get(sigla);
+                if (c != null) {
+                    c.atualizarPreco(novoPreco);
+                    System.out.println("Atualizado: " + sigla
+                            + " | Preco anterior: R$ " + String.format("%.2f", precoBase)
+                            + " -> Novo preco: R$ " + String.format("%.2f", c.getPrecoAtual()));
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Erro ao ler criptoativos.txt: " + e.getMessage());
+        }
+
+        // --- ATUALIZACAO: regravar criptoativos.txt com precos atualizados ---
+        System.out.println("\n--- Regravando criptoativos.txt com precos atualizados ---");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("criptoativos.txt"))) {
+            for (Map.Entry<String, Criptoativo> entrada : mapCriptoativos.entrySet()) {
+                Criptoativo c = entrada.getValue();
+                bw.write(c.getIdCripto() + "|" + c.getNome() + "|" + c.getSigla() + "|"
+                        + c.getPrecoAtual() + "|" + c.getVariacao24h() + "|" + c.getCategoria());
+                bw.newLine();
+            }
+            System.out.println("Arquivo criptoativos.txt atualizado com " + mapCriptoativos.size() + " registro(s).");
+        } catch (IOException e) {
+            System.out.println("Erro ao regravar criptoativos.txt: " + e.getMessage());
         }
     }
 }
