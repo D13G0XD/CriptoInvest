@@ -47,7 +47,14 @@ public class Posicao {
         }
         this.quantidadeAtual = quantidadeAtual;
     }
-    public void setPrecoMedioCompra(double precoMedioCompra) { this.precoMedioCompra = precoMedioCompra; }
+    public void setPrecoMedioCompra(double precoMedioCompra) {
+        // ck_posicao_preco CHECK (preco_medio_compra >= 0)
+        if (precoMedioCompra < 0) {
+            System.out.println("Erro: preco_medio_compra nao pode ser negativo.");
+            return;
+        }
+        this.precoMedioCompra = precoMedioCompra;
+    }
     public void setDataUltimaAtualizacao(String data) { this.dataUltimaAtualizacao = data; }
 
     public void aplicarCompra(double quantidade, double precoUnitario, String data) {

@@ -164,7 +164,7 @@ CREATE TABLE transacao (
     taxa            NUMBER(15,4)    NOT NULL,
     data_operacao   DATE            NOT NULL,
     CONSTRAINT pk_transacao         PRIMARY KEY (id_transacao),
-    CONSTRAINT ck_transacao_tipo    CHECK (tipo IN ('COMPRA','VENDA','CONVERSAO')),
+    CONSTRAINT ck_transacao_tipo    CHECK (tipo IN ('COMPRA','VENDA')),
     CONSTRAINT ck_transacao_qtde    CHECK (quantidade > 0),
     CONSTRAINT ck_transacao_preco   CHECK (preco_unitario >= 0),
     CONSTRAINT ck_transacao_taxa    CHECK (taxa >= 0),
@@ -186,7 +186,9 @@ CREATE TABLE relatorio (
     data_geracao                DATE            NOT NULL,
     valor_total_carteira        NUMBER(18,2),
     total_investido             NUMBER(18,2),
+    total_vendido               NUMBER(18,2),
     total_taxas                 NUMBER(15,4),
+    lucro_total                 NUMBER(18,2),
     rentabilidade_percentual    NUMBER(10,4),
     CONSTRAINT pk_relatorio PRIMARY KEY (id_relatorio),
     CONSTRAINT fk_relatorio_carteira FOREIGN KEY (id_carteira)
@@ -265,15 +267,15 @@ VALUES (seq_criptoativo.NEXTVAL, 'Ethereum', 'ETH', 16000,    6.67, 'Plataforma'
 
 -- Transacoes na carteira PF do Lucas (id_carteira=1)
 INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao)
-VALUES (seq_transacao.NEXTVAL, 1, 1, 'COMPRA', 0.5, 300000, 150,  DATE '2026-05-07');
+VALUES (seq_transacao.NEXTVAL, 1, 1, 'COMPRA', 0.5, 350000, 175,  DATE '2026-05-07');
 INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao)
-VALUES (seq_transacao.NEXTVAL, 1, 2, 'COMPRA', 2.0, 15000,  30,   DATE '2026-05-07');
+VALUES (seq_transacao.NEXTVAL, 1, 2, 'COMPRA', 2.0, 16000,  32,   DATE '2026-05-07');
 INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao)
 VALUES (seq_transacao.NEXTVAL, 1, 1, 'VENDA',  0.1, 350000, 35,   DATE '2026-05-07');
 
 -- Relatorio
-INSERT INTO relatorio (id_relatorio, id_carteira, data_geracao, valor_total_carteira, total_investido, total_taxas, rentabilidade_percentual)
-VALUES (seq_relatorio.NEXTVAL, 1, DATE '2026-05-07', 172000, 207207, 242, -16.99);
+INSERT INTO relatorio (id_relatorio, id_carteira, data_geracao, valor_total_carteira, total_investido, total_vendido, total_taxas, lucro_total, rentabilidade_percentual)
+VALUES (seq_relatorio.NEXTVAL, 1, DATE '2026-05-07', 172000, 207207, 34965, 242, -242, -0.12);
 
 -- Alerta
 INSERT INTO alerta (id_alerta, id_usuario, id_cripto, limite_variacao, ativado, data_configuracao)
@@ -281,9 +283,9 @@ VALUES (seq_alerta.NEXTVAL, 1, 1, 5.0, 'S', DATE '2026-05-07');
 
 -- Posicao
 INSERT INTO posicao (id_posicao, id_carteira, id_cripto, quantidade_atual, preco_medio_compra, data_primeira_aquisicao, data_ultima_atualizacao)
-VALUES (seq_posicao.NEXTVAL, 1, 1, 0.4, 300000, DATE '2026-05-07', DATE '2026-05-07');
+VALUES (seq_posicao.NEXTVAL, 1, 1, 0.4, 350000, DATE '2026-05-07', DATE '2026-05-07');
 INSERT INTO posicao (id_posicao, id_carteira, id_cripto, quantidade_atual, preco_medio_compra, data_primeira_aquisicao, data_ultima_atualizacao)
-VALUES (seq_posicao.NEXTVAL, 1, 2, 2.0, 15000,  DATE '2026-05-07', DATE '2026-05-07');
+VALUES (seq_posicao.NEXTVAL, 1, 2, 2.0, 16000,  DATE '2026-05-07', DATE '2026-05-07');
 
 COMMIT;
 
