@@ -34,4 +34,7 @@ bin/
 CLAUDE.md
 .claude/
 
+### IntelliJ (config local por usuario) ###
+.idea/workspace.xml
+
 *.txt
