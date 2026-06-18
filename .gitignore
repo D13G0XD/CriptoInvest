@@ -4,6 +4,7 @@ out/
 !**/src/test/**/out/
 .idea/inspectionProfiles/
 
+
 ### Eclipse ###
 .apt_generated
 .classpath
@@ -32,3 +33,8 @@ bin/
 ### Claude ###
 CLAUDE.md
 .claude/
+
+### IntelliJ (config local por usuario) ###
+.idea/workspace.xml
+
+*.txt

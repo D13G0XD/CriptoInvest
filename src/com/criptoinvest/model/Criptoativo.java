@@ -13,7 +13,13 @@ public class Criptoativo {
         this.idCripto = id;
         this.nome = nome;
         this.sigla = sigla;
-        this.precoAtual = precoAtual;
+        // ck_criptoativo_preco CHECK (preco_atual >= 0)
+        if (precoAtual < 0) {
+            System.out.println("Aviso: preco_atual negativo, ajustado para 0.");
+            this.precoAtual = 0;
+        } else {
+            this.precoAtual = precoAtual;
+        }
         this.variacao24h = 0;
         this.categoria = categoria;
     }
