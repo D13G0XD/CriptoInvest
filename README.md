@@ -144,4 +144,4 @@ A herança foi modelada na **carteira**, não no titular: `Carteira` (pai abstra
 | Sprint 1 — Fase 1 | Escopo do Produto (Problema, Público-Alvo e Solução) |
 | Sprint 2 — Fase 2 | Classes Java + Diagrama de Classes |
 | Sprint 3 — Fase 3 | Encapsulamento, Herança, Polimorfismo e Classe Main |
-| Sprint 4 — Fase 4 | Modelo Relacional SQL (DDL Oracle, herança joined em Carteira); Normalização 1FN/2FN/3FN (`modelo/Normalizacao.md`); persistência em arquivos texto a partir de `ArrayList` e `HashMap` na `Main` |
+| Sprint 4 — Fase 4 | Modelo Relacional SQL (DDL Oracle, herança joined em Carteira); Normalização 1FN/2FN/3FN (`modelo/Normalizacao.pdf`); persistência em arquivos texto a partir de `ArrayList` e `HashMap` na `Main` |
