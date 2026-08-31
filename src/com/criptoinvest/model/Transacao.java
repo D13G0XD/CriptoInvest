@@ -29,8 +29,7 @@ public class Transacao {
         this.criptoativo = criptoativo;
 
         if (quantidade <= 0) {
-            System.out.println("Aviso: quantidade deve ser positiva, ajustada para 1.");
-            this.quantidade = 1;
+            throw new IllegalArgumentException("Aviso: quantidade deve ser positiva");
         } else {
             this.quantidade = quantidade;
         }
@@ -47,8 +46,7 @@ public class Transacao {
         if ("COMPRA".equals(tipo) || "VENDA".equals(tipo)) {
             this.tipo = tipo;
         } else {
-            System.out.println("Aviso: tipo invalido, definido como COMPRA.");
-            this.tipo = "COMPRA";
+            throw new IllegalArgumentException("Aviso: tipo invalido!");
         }
 
         recalcularTaxa();
