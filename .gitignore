@@ -4,7 +4,6 @@ out/
 !**/src/test/**/out/
 .idea/inspectionProfiles/
 
-
 ### Eclipse ###
 .apt_generated
 .classpath
