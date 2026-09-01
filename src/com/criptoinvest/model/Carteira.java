@@ -91,9 +91,11 @@ public abstract class Carteira {
     }
 
     public void registrarTransacao(Transacao transacao) {
-        transacao.setCarteira(this);
-        transacoes.add(transacao);
-        aplicarNaPosicao(transacao);
+        if (aplicarNaPosicao(transacao)) {
+            transacoes.add(transacao);
+        }
+
+
     }
 
     public void registrarTransacao(Transacao transacao, String observacao) {
@@ -101,7 +103,7 @@ public abstract class Carteira {
         registrarTransacao(transacao);
     }
 
-    private void aplicarNaPosicao(Transacao t) {
+    private boolean aplicarNaPosicao(Transacao t) {
         Criptoativo c = t.getCriptoativo();
         Posicao p = buscarPosicao(c.getIdCripto());
 
@@ -113,14 +115,17 @@ public abstract class Carteira {
             } else {
                 p.aplicarCompra(t.getQuantidade(), t.getPrecoUnitario(), t.getDataOperacao());
             }
+            return true;
         } else if ("VENDA".equals(t.getTipo())) {
             if (p == null || p.getQuantidadeAtual() < t.getQuantidade()) {
                 System.out.println("Erro: venda de " + t.getQuantidade() + " "
                         + c.getSigla() + " sem posicao suficiente.");
-                return;
+                return false;
             }
             p.aplicarVenda(t.getQuantidade(), t.getDataOperacao());
+            return true;
         }
+        return false;
     }
 
     public double calcularSaldoCripto(String sigla) {
