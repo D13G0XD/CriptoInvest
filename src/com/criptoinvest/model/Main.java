@@ -1,12 +1,17 @@
 package com.criptoinvest.model;
 
+import com.criptoinvest.dao.CriptoativoDAO;
+import com.criptoinvest.factory.ConnectionFactory;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class Main {
 
@@ -302,5 +307,129 @@ public class Main {
         } catch (IOException e) {
             System.out.println("Erro ao regravar usuarios.txt: " + e.getMessage());
         }
+
+        // =====================================================================
+        // FASE 5 - INTEGRACAO COM O BANCO DE DADOS ORACLE (classe Criptoativo)
+        // =====================================================================
+        executarTestesBancoDeDados();
+    }
+
+    // =========================================================================
+    // METODOS DE TESTE DA INTEGRACAO COM O BANCO DE DADOS
+    // Classe escolhida para a integracao: Criptoativo  ->  tabela CRIPTOATIVO
+    // =========================================================================
+
+    /** Executa, em sequencia, todos os testes de integracao com o Oracle. */
+    public static void executarTestesBancoDeDados() {
+        System.out.println("\n============================================================");
+        System.out.println(" FASE 5 - INTEGRACAO COM BANCO DE DADOS ORACLE (Criptoativo)");
+        System.out.println("============================================================");
+
+        if (!testarConexao()) {
+            System.out.println("Testes de banco de dados interrompidos: sem conexao.");
+            System.out.println("Confira URL, usuario e senha em com.criptoinvest.factory.ConnectionFactory");
+            System.out.println("e se o driver ojdbc esta no classpath.");
+            return;
+        }
+
+        CriptoativoDAO dao = new CriptoativoDAO();
+        try {
+            int idNovo = testarInserir(dao);
+            testarExibirTodos(dao);
+            testarExibirPorId(dao, idNovo);
+            testarAlterar(dao, idNovo);
+            testarExcluir(dao, idNovo);
+            testarExibirTodos(dao);
+        } catch (SQLException e) {
+            System.out.println("Erro na integracao com o banco de dados: " + e.getMessage());
+        }
+    }
+
+    /** Teste 1 - abertura da conexao com o Oracle da FIAP. */
+    public static boolean testarConexao() {
+        System.out.println("\n--- Teste 1: conexao com o banco ---");
+        System.out.println("URL....: " + ConnectionFactory.getUrl());
+        System.out.println("Usuario: " + ConnectionFactory.getUsuario());
+        return ConnectionFactory.testarConexao();
+    }
+
+    /** Teste 2 - INSERT: grava um novo criptoativo e devolve o id gerado. */
+    public static int testarInserir(CriptoativoDAO dao) throws SQLException {
+        System.out.println("\n--- Teste 2: INSERIR criptoativo ---");
+
+        Criptoativo novo = new Criptoativo(0, "Chainlink", "LINK", 85.50, "Oraculo");
+        novo.setVariacao24h(2.35);
+
+        int id = dao.inserir(novo);
+        System.out.println("Criptoativo inserido com id_cripto = " + id);
+        novo.exibirDados();
+        return id;
+    }
+
+    /** Teste 3 - SELECT: lista todos os criptoativos gravados no banco. */
+    public static void testarExibirTodos(CriptoativoDAO dao) throws SQLException {
+        System.out.println("\n--- Teste 3: EXIBIR todos os criptoativos ---");
+
+        List<Criptoativo> criptoativos = dao.listarTodos();
+        System.out.println("Total de registros: " + criptoativos.size());
+        System.out.printf("%-5s %-15s %-8s %15s %10s %-15s%n",
+                "ID", "NOME", "SIGLA", "PRECO", "VAR24H", "CATEGORIA");
+
+        for (Criptoativo c : criptoativos) {
+            System.out.printf("%-5d %-15s %-8s %15.2f %9.2f%% %-15s%n",
+                    c.getIdCripto(), c.getNome(), c.getSigla(),
+                    c.getPrecoAtual(), c.getVariacao24h(), c.getCategoria());
+        }
+    }
+
+    /** Teste 4 - SELECT por chave primaria. */
+    public static void testarExibirPorId(CriptoativoDAO dao, int idCripto) throws SQLException {
+        System.out.println("\n--- Teste 4: EXIBIR criptoativo por id (" + idCripto + ") ---");
+
+        Criptoativo c = dao.buscarPorId(idCripto);
+        if (c == null) {
+            System.out.println("Nenhum criptoativo encontrado com id_cripto = " + idCripto);
+            return;
+        }
+        c.exibirDados();
+    }
+
+    /** Teste 5 - UPDATE: altera preco, variacao e categoria do registro gravado. */
+    public static void testarAlterar(CriptoativoDAO dao, int idCripto) throws SQLException {
+        System.out.println("\n--- Teste 5: ALTERAR criptoativo (" + idCripto + ") ---");
+
+        Criptoativo c = dao.buscarPorId(idCripto);
+        if (c == null) {
+            System.out.println("Nenhum criptoativo encontrado com id_cripto = " + idCripto);
+            return;
+        }
+
+        System.out.println("Antes da alteracao:");
+        c.exibirDados();
+
+        c.atualizarPreco(99.90);              // recalcula a variacao 24h
+        c.setCategoria("Oraculo Descentralizado");
+
+        int linhas = dao.alterar(c);
+        System.out.println("Linhas alteradas: " + linhas);
+
+        System.out.println("Depois da alteracao (relido do banco):");
+        Criptoativo atualizado = dao.buscarPorId(idCripto);
+        if (atualizado != null) {
+            atualizado.exibirDados();
+        }
+    }
+
+    /** Teste 6 - DELETE: remove o registro criado pelos testes. */
+    public static void testarExcluir(CriptoativoDAO dao, int idCripto) throws SQLException {
+        System.out.println("\n--- Teste 6: EXCLUIR criptoativo (" + idCripto + ") ---");
+
+        int linhas = dao.excluir(idCripto);
+        System.out.println("Linhas excluidas: " + linhas);
+
+        Criptoativo c = dao.buscarPorId(idCripto);
+        System.out.println(c == null
+                ? "Confirmado: o registro nao existe mais no banco."
+                : "Atencao: o registro ainda existe no banco.");
     }
 }
