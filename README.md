@@ -33,21 +33,27 @@ O mercado de criptoativos ultrapassou a marca de 2,5 trilhões de dólares em ca
 
 ## Como Executar
 
-O projeto é Java puro, sem framework ou build tool. Compile e execute diretamente com `javac`/`java`.
+O projeto é Java puro. Compile e execute direto com `javac`/`java`; o Maven (`pom.xml`) é
+opcional e serve apenas para baixar o driver JDBC do Oracle usado na Fase 5.
 
 **Compilar:**
 ```
-javac src/com/criptoinvest/model/*.java -d out/
+javac -sourcepath src -d out src/com/criptoinvest/model/Main.java
 ```
+O `-sourcepath` faz o compilador puxar sozinho as classes dos três pacotes (`model`, `dao`
+e `factory`), sem precisar listar cada um.
 
 **Executar:**
 ```
-java -cp out/ com.criptoinvest.model.Main
+java -cp out com.criptoinvest.model.Main
 ```
+
+Sem o driver do Oracle no classpath, as Fases 1 a 4 rodam normalmente e a Fase 5 apenas avisa
+que não há conexão, sem interromper a demonstração.
 
 ### Compilar e executar com integração ao banco (Fase 5)
 
-A integração com o Oracle exige o driver JDBC (`ojdbc`) no classpath. Há duas formas:
+A integração com o Oracle exige o driver JDBC (`ojdbc8`) no classpath. Há duas formas:
 
 **Com Maven (recomendado):**
 ```
@@ -57,14 +63,34 @@ mvn exec:java -Dexec.mainClass=com.criptoinvest.model.Main
 
 **Com javac/java + driver baixado manualmente em `lib/`:**
 ```
-javac -cp lib/ojdbc8.jar -d out/ src/com/criptoinvest/**/*.java
-java  -cp out/:lib/ojdbc8.jar com.criptoinvest.model.Main
-```
+javac -cp lib/ojdbc8.jar -sourcepath src -d out src/com/criptoinvest/model/Main.java
 
-As credenciais do banco ficam em `src/com/criptoinvest/factory/ConnectionFactory.java` e podem ser
-informadas sem alterar o código, por propriedades de sistema:
+java -cp "out;lib/ojdbc8.jar" com.criptoinvest.model.Main   # Windows
+java -cp "out:lib/ojdbc8.jar" com.criptoinvest.model.Main   # Linux / macOS
 ```
-java -Ddb.user=rmXXXXXX -Ddb.password=SUA_SENHA -cp out/:lib/ojdbc8.jar com.criptoinvest.model.Main
+Atenção ao separador do classpath: `;` no Windows e `:` no Linux e no macOS.
+
+### Credenciais do banco
+
+Crie um arquivo `.env` na raiz do projeto. Ele guarda credenciais reais, está listado no
+`.gitignore` e **nunca deve ser versionado**:
+```
+DB_URL = jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl
+DB_USER = rmXXXXXX
+DB_PASSWORD = ddmmaa
+```
+(no padrão da FIAP, o usuário é o RM do aluno e a senha é a data de nascimento em `ddmmaa`)
+
+A `ConnectionFactory` resolve cada dado na primeira fonte que o define:
+
+1. propriedades de sistema: `-Ddb.url`, `-Ddb.user`, `-Ddb.password`;
+2. o arquivo `.env` acima — procurado na pasta atual e em até três níveis acima, ou no caminho
+   indicado por `-Denv.file=/caminho/para/.env`;
+3. as constantes `_PADRAO` da própria classe.
+
+Assim dá para sobrepor o `.env` pontualmente, sem editá-lo:
+```
+java -Ddb.user=rmXXXXXX -Ddb.password=SUA_SENHA -cp "out;lib/ojdbc8.jar" com.criptoinvest.model.Main
 ```
 
 **Scripts SQL (Oracle):** execute na ordem `sql/criptoinvest_ddl.sql` (estrutura) e depois
