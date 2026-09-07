@@ -50,7 +50,7 @@ public class CriptoativoDAO {
             "SELECT id_cripto, nome, sigla, preco_atual, variacao_24h, categoria "
           + "  FROM criptoativo ORDER BY id_cripto";
 
-    // ------------------------------------------------------------------------
+    // ---------------  ---------------------------------------------------------
     // INSERIR
     // ------------------------------------------------------------------------
 
