@@ -11,6 +11,13 @@ package com.criptoinvest.model;
  */
 public class Posicao {
 
+    /**
+     * Gerador dos ids das posicoes, espelhando a sequence seq_posicao do banco.
+     * O contador e unico para todo o sistema: um contador por carteira faria
+     * duas carteiras diferentes gerarem a mesma PK.
+     */
+    private static int sequencia = 0;
+
     private int idPosicao;            // PK
     private Carteira carteira;        // FK -> Carteira (idCarteira) - obrigatoria
     private Criptoativo criptoativo;  // FK -> Criptoativo (idCripto) - obrigatoria
@@ -20,9 +27,9 @@ public class Posicao {
     private String dataPrimeiraAquisicao;
     private String dataUltimaAtualizacao;
 
-    public Posicao(int idPosicao, Carteira carteira, Criptoativo criptoativo,
+    public Posicao(Carteira carteira, Criptoativo criptoativo,
                    double quantidadeInicial, double precoInicial, String dataAquisicao) {
-        this.idPosicao = idPosicao;
+        this.idPosicao = ++sequencia;
         this.carteira = carteira;
         this.criptoativo = criptoativo;
         this.quantidadeAtual = quantidadeInicial;
@@ -32,6 +39,7 @@ public class Posicao {
     }
 
     public int getIdPosicao() { return idPosicao; }
+    public void setIdPosicao(int idPosicao) { this.idPosicao = idPosicao; }
     public Carteira getCarteira() { return carteira; }
     public Criptoativo getCriptoativo() { return criptoativo; }
     public double getQuantidadeAtual() { return quantidadeAtual; }

@@ -1,6 +1,7 @@
 package com.criptoinvest.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -13,20 +14,25 @@ import java.util.List;
  */
 public abstract class Carteira {
 
+    /**
+     * Gerador dos ids das carteiras, espelhando a sequence seq_carteira do banco.
+     * A tabela carteira e unica para PF e PJ, entao o id nao pode vir do titular:
+     * usuario 2 e empresa 2 gerariam a mesma PK.
+     */
+    private static int sequencia = 0;
+
     protected int idCarteira;          // PK
     protected String descricao;
     protected double saldoReais;
     protected List<Transacao> transacoes;
     protected List<Posicao> posicoes;
-    protected int proximoIdPosicao;
 
-    public Carteira(int id, String descricao, double saldoInicial) {
-        this.idCarteira = id;
+    protected Carteira(String descricao, double saldoInicial) {
+        this.idCarteira = ++sequencia;
         this.descricao = descricao;
         this.saldoReais = saldoInicial < 0 ? 0 : saldoInicial;
         this.transacoes = new ArrayList<>();
         this.posicoes = new ArrayList<>();
-        this.proximoIdPosicao = 1;
     }
 
     public int getIdCarteira() { return idCarteira; }
@@ -37,10 +43,12 @@ public abstract class Carteira {
 
     public double getSaldoReais() { return saldoReais; }
 
-    public List<Transacao> getTransacoes() { return transacoes; }
+    /** Somente leitura: o historico so muda por registrarTransacao(). */
+    public List<Transacao> getTransacoes() { return Collections.unmodifiableList(transacoes); }
     public int getTotalTransacoes() { return transacoes.size(); }
 
-    public List<Posicao> getPosicoes() { return posicoes; }
+    /** Somente leitura: as posicoes so mudam a partir das transacoes registradas. */
+    public List<Posicao> getPosicoes() { return Collections.unmodifiableList(posicoes); }
 
     /** Discriminador da heranca (carteira.tipo IN ('PF','PJ')). */
     public abstract String getTipo();
@@ -90,37 +98,60 @@ public abstract class Carteira {
         return null;
     }
 
-    public void registrarTransacao(Transacao transacao) {
+    /**
+     * Registra a transacao na carteira. A operacao so entra no historico depois
+     * de ser aceita pela posicao: uma venda sem saldo e recusada por inteiro e
+     * nao contamina os totais de vendas, taxas, lucro e rentabilidade.
+     *
+     * @return true quando a transacao foi efetivada
+     */
+    public boolean registrarTransacao(Transacao transacao) {
+        if (transacao == null) {
+            System.out.println("Erro: transacao nula.");
+            return false;
+        }
+        if (!aplicarNaPosicao(transacao)) {
+            return false;
+        }
         transacao.setCarteira(this);
         transacoes.add(transacao);
-        aplicarNaPosicao(transacao);
+        return true;
     }
 
-    public void registrarTransacao(Transacao transacao, String observacao) {
-        transacao.setObservacao(observacao);
-        registrarTransacao(transacao);
+    public boolean registrarTransacao(Transacao transacao, String observacao) {
+        if (transacao != null) {
+            transacao.setObservacao(observacao);
+        }
+        return registrarTransacao(transacao);
     }
 
-    private void aplicarNaPosicao(Transacao t) {
+    /**
+     * Aplica a transacao na posicao correspondente.
+     *
+     * @return true se a posicao aceitou a operacao; false quando a venda
+     *         excede o saldo em custodia (nada e alterado nesse caso)
+     */
+    private boolean aplicarNaPosicao(Transacao t) {
         Criptoativo c = t.getCriptoativo();
         Posicao p = buscarPosicao(c.getIdCripto());
 
         if ("COMPRA".equals(t.getTipo())) {
             if (p == null) {
-                p = new Posicao(proximoIdPosicao++, this, c,
-                        t.getQuantidade(), t.getPrecoUnitario(), t.getDataOperacao());
-                posicoes.add(p);
+                posicoes.add(new Posicao(this, c,
+                        t.getQuantidade(), t.getPrecoUnitario(), t.getDataOperacao()));
             } else {
                 p.aplicarCompra(t.getQuantidade(), t.getPrecoUnitario(), t.getDataOperacao());
             }
-        } else if ("VENDA".equals(t.getTipo())) {
-            if (p == null || p.getQuantidadeAtual() < t.getQuantidade()) {
-                System.out.println("Erro: venda de " + t.getQuantidade() + " "
-                        + c.getSigla() + " sem posicao suficiente.");
-                return;
-            }
-            p.aplicarVenda(t.getQuantidade(), t.getDataOperacao());
+            return true;
         }
+
+        if (p == null || p.getQuantidadeAtual() < t.getQuantidade()) {
+            System.out.println("Erro: venda de " + t.getQuantidade() + " "
+                    + c.getSigla() + " recusada - sem posicao suficiente.");
+            return false;
+        }
+        p.aplicarVenda(t.getQuantidade(), t.getDataOperacao());
+        return true;
     }
 
     public double calcularSaldoCripto(String sigla) {

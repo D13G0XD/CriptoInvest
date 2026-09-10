@@ -14,16 +14,16 @@ public class CarteiraPF extends Carteira {
     private double saquesHoje;
     private String dataUltimoSaque;
 
-    public CarteiraPF(int id, String descricao, double saldoInicial, double limiteDiarioSaque) {
-        super(id, descricao, saldoInicial);
+    public CarteiraPF(String descricao, double saldoInicial, double limiteDiarioSaque) {
+        super(descricao, saldoInicial);
         // ck_carteira_pf_lim CHECK (limite_diario_saque >= 0)
         this.limiteDiarioSaque = limiteDiarioSaque < 0 ? 0 : limiteDiarioSaque;
         this.saquesHoje = 0;
         this.dataUltimoSaque = null;
     }
 
-    public CarteiraPF(int id, String descricao) {
-        this(id, descricao, 0, 5000);
+    public CarteiraPF(String descricao) {
+        this(descricao, 0, 5000);
     }
 
     public double getLimiteDiarioSaque() { return limiteDiarioSaque; }

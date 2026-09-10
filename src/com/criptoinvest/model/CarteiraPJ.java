@@ -10,8 +10,8 @@ public class CarteiraPJ extends Carteira {
 
     private String regimeTributario;
 
-    public CarteiraPJ(int id, String descricao, double saldoInicial, String regimeTributario) {
-        super(id, descricao, saldoInicial);
+    public CarteiraPJ(String descricao, double saldoInicial, String regimeTributario) {
+        super(descricao, saldoInicial);
         if (regimeValido(regimeTributario)) {
             this.regimeTributario = regimeTributario;
         } else {
@@ -20,8 +20,8 @@ public class CarteiraPJ extends Carteira {
         }
     }
 
-    public CarteiraPJ(int id, String descricao) {
-        this(id, descricao, 0, "SIMPLES");
+    public CarteiraPJ(String descricao) {
+        this(descricao, 0, "SIMPLES");
     }
 
     public String getRegimeTributario() { return regimeTributario; }

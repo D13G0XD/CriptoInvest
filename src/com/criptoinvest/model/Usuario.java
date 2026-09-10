@@ -23,7 +23,7 @@ public class Usuario {
                    double saldoInicial, double limiteDiarioSaque) {
         this.id = id;
         this.nome = nome;
-        this.carteira = new CarteiraPF(id, "Carteira PF de " + nome, saldoInicial, limiteDiarioSaque);
+        this.carteira = new CarteiraPF("Carteira PF de " + nome, saldoInicial, limiteDiarioSaque);
         this.email = email;
         this.senha = senha;
         this.cpf = cpf;

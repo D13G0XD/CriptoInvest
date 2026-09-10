@@ -31,6 +31,12 @@ O mercado de criptoativos ultrapassou a marca de 2,5 trilhões de dólares em ca
 - **Relatórios e exportação** com relatórios diários de performance e exportação de dados.
 - **Alertas** configuráveis para variações de preço dos criptoativos monitorados.
 
+> As funcionalidades acima descrevem o **escopo do produto** definido na Fase 1. O que está
+> implementado até a Fase 5 é o modelo de domínio em Java, a persistência em arquivos texto,
+> o modelo relacional Oracle e a integração JDBC da classe `Criptoativo` — sem interface
+> gráfica, sem cotações em tempo real e sem a camada de segurança (2FA e criptografia são
+> requisitos de produto, ainda não implementados).
+
 ## Como Executar
 
 O projeto é Java puro. Compile e execute direto com `javac`/`java`; o Maven (`pom.xml`) é
@@ -75,7 +81,7 @@ Atenção ao separador do classpath: `;` no Windows e `:` no Linux e no macOS.
 Crie um arquivo `.env` na raiz do projeto. Ele guarda credenciais reais, está listado no
 `.gitignore` e **nunca deve ser versionado**:
 ```
-DB_URL = jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl
+DB_URL = jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL
 DB_USER = rmXXXXXX
 DB_PASSWORD = ddmmaa
 ```
@@ -98,7 +104,8 @@ java -Ddb.user=rmXXXXXX -Ddb.password=SUA_SENHA -cp "out;lib/ojdbc8.jar" com.cri
 
 ## Estrutura de Classes
 
-Todas as classes estão no pacote `com.criptoinvest.model`:
+O código está dividido em três pacotes: o domínio em `com.criptoinvest.model`, o acesso a
+dados em `com.criptoinvest.dao` e a conexão em `com.criptoinvest.factory`.
 
 ```
 src/com/criptoinvest/
@@ -174,6 +181,8 @@ sql/
 
 A herança foi modelada na **carteira**, não no titular: `Carteira` (pai abstrato) tem como filhas `CarteiraPF` e `CarteiraPJ`. No banco, isso vira três tabelas — `carteira` (atributos comuns + discriminador `tipo`), `carteira_pf` (PK/FK ligando-se à pai, com `limite_diario_saque`) e `carteira_pj` (PK/FK ligando-se à pai, com `regime_tributario`). Tabelas filhas como `transacao`, `posicao`, `relatorio` referenciam a tabela pai `carteira`, mantendo a FK polimórfica.
 
+Como `carteira` é uma tabela única para PF e PJ, o id da carteira **não** vem do titular: `Carteira` gera o seu próprio id a partir de um contador estático, espelhando a sequence `seq_carteira`. `Posicao` segue a mesma regra (`seq_posicao`), com contador único para todo o sistema — um contador por carteira faria duas carteiras diferentes gerarem a mesma PK.
+
 ## Conceitos de POO Aplicados
 
 | Conceito | Implementação |
@@ -186,7 +195,7 @@ A herança foi modelada na **carteira**, não no titular: `Carteira` (pai abstra
 ## Tecnologias
 
 - **Linguagem:** Java SE
-- **JDK:** OpenJDK 26
+- **JDK:** compilado para Java 17 (`maven.compiler.source/target` no `pom.xml`); testado no OpenJDK 26
 - **Banco de Dados:** Oracle 19c+ (FIAP) — scripts em `sql/`
 - **Acesso a dados:** JDBC puro (driver `ojdbc8`), padrão DAO + Connection Factory
 - **Build:** Maven (`pom.xml`) ou `javac`/`java` com o driver no classpath
