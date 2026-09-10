@@ -19,11 +19,17 @@ public class Transacao {
 
     public Transacao(int id, String tipo, Criptoativo criptoativo,
                      double quantidade, String dataOperacao) {
-        this(id, tipo, criptoativo, quantidade, criptoativo.getPrecoAtual(), dataOperacao);
+        // precoAtualDe valida o criptoativo antes de este construtor delegar,
+        // evitando um NullPointerException cru na leitura do preco.
+        this(id, tipo, criptoativo, quantidade, precoAtualDe(criptoativo), dataOperacao);
     }
 
     public Transacao(int id, String tipo, Criptoativo criptoativo,
                      double quantidade, double precoUnitario, String dataOperacao) {
+
+        if (criptoativo == null) {
+            throw new IllegalArgumentException("Transacao exige um Criptoativo.");
+        }
 
         this.idTransacao = id;
         this.criptoativo = criptoativo;
@@ -52,6 +58,14 @@ public class Transacao {
         }
 
         recalcularTaxa();
+    }
+
+    /** Le o preco atual do criptoativo, recusando a transacao sem criptoativo. */
+    private static double precoAtualDe(Criptoativo criptoativo) {
+        if (criptoativo == null) {
+            throw new IllegalArgumentException("Transacao exige um Criptoativo.");
+        }
+        return criptoativo.getPrecoAtual();
     }
 
     private void recalcularTaxa() {

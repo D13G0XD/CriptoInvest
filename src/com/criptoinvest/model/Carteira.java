@@ -99,9 +99,13 @@ public abstract class Carteira {
     }
 
     /**
-     * Registra a transacao na carteira. A operacao so entra no historico depois
-     * de ser aceita pela posicao: uma venda sem saldo e recusada por inteiro e
-     * nao contamina os totais de vendas, taxas, lucro e rentabilidade.
+     * Registra a transacao na carteira, movimentando o saldo em reais e a posicao
+     * em custodia: a compra debita o valor com taxa, a venda credita o liquido.
+     *
+     * A operacao so entra no historico depois de passar pelas duas validacoes -
+     * saldo em reais suficiente na compra e posicao suficiente na venda. Uma
+     * transacao recusada nao altera nada e nao contamina os totais de vendas,
+     * taxas, lucro e rentabilidade.
      *
      * @return true quando a transacao foi efetivada
      */
@@ -110,9 +114,23 @@ public abstract class Carteira {
             System.out.println("Erro: transacao nula.");
             return false;
         }
+
+        boolean compra = "COMPRA".equals(transacao.getTipo());
+        double valor = transacao.calcularValorComTaxa();
+
+        // ck_carteira_saldo CHECK (saldo_reais >= 0): a compra nao pode estourar o saldo
+        if (compra && valor > saldoReais) {
+            System.out.println("Erro: compra de " + transacao.getQuantidade() + " "
+                    + transacao.getCriptoativo().getSigla() + " recusada - saldo insuficiente ("
+                    + String.format("R$ %.2f", saldoReais) + " disponivel, "
+                    + String.format("R$ %.2f", valor) + " necessario).");
+            return false;
+        }
         if (!aplicarNaPosicao(transacao)) {
             return false;
         }
+
+        this.saldoReais += compra ? -valor : valor;
         transacao.setCarteira(this);
         transacoes.add(transacao);
         return true;

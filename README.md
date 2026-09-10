@@ -183,6 +183,17 @@ A herança foi modelada na **carteira**, não no titular: `Carteira` (pai abstra
 
 Como `carteira` é uma tabela única para PF e PJ, o id da carteira **não** vem do titular: `Carteira` gera o seu próprio id a partir de um contador estático, espelhando a sequence `seq_carteira`. `Posicao` segue a mesma regra (`seq_posicao`), com contador único para todo o sistema — um contador por carteira faria duas carteiras diferentes gerarem a mesma PK.
 
+#### Regras de negócio da `Carteira`
+
+`registrarTransacao` movimenta as duas pontas de uma vez — o saldo em reais e a posição em custódia — e só grava a operação no histórico depois de validar as duas:
+
+| Operação | Saldo em reais | Posição | Recusada quando |
+|---|---|---|---|
+| `COMPRA` | debita `bruto + taxa` | soma a quantidade e recalcula o preço médio | o saldo em reais não cobre o valor com taxa (`ck_carteira_saldo`) |
+| `VENDA`  | credita `bruto - taxa` | subtrai a quantidade | a posição em custódia é menor que a quantidade vendida |
+
+Uma transação recusada não altera nada e não entra no histórico, então os totais de vendas, taxas, lucro e rentabilidade nunca contam uma operação que não aconteceu. O método devolve `boolean` informando se a operação foi efetivada.
+
 ## Conceitos de POO Aplicados
 
 | Conceito | Implementação |

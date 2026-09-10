@@ -48,8 +48,9 @@ public class Main {
         try {
             usuario  = new Usuario(1, "Lucas",   "lucas@email.com",   "senha123", "123.456.789-00");
             usuario2 = new Usuario(2, "Ana",     "ana@email.com",     "senha456", "987.654.321-00");
-            usuario.getCarteira().depositar(10000.00);
-            usuario.getCarteira().depositar(5000.00, "Aporte mensal");
+            // aportes dimensionados para as compras da demonstracao (R$ 207.207 no total)
+            usuario.getCarteira().depositar(200000.00);
+            usuario.getCarteira().depositar(50000.00, "Aporte mensal");
             usuario.ativar2FA();
             usuario.exibirDados();
             usuario2.exibirDados();
@@ -73,7 +74,7 @@ public class Main {
         try {
             empresa = new Empresa(2, "ABCD Investimentos", "00.000.000/0001-00", "LUCRO_PRESUMIDO", usuario);
             usuario.adicionarEmpresa(empresa);
-            empresa.getCarteira().depositar(50000.00, "Capital inicial");
+            empresa.getCarteira().depositar(100000.00, "Capital inicial");
             empresa.exibirDados();
         } catch (Exception e) {
             System.out.println("Erro ao criar empresa: " + e.getMessage());
@@ -116,6 +117,22 @@ public class Main {
             tPj.exibirDados();
         } catch (Exception e) {
             System.out.println("Erro ao registrar transacao PJ: " + e.getMessage());
+        }
+
+        // --- Transacoes recusadas: nada e gravado e os totais nao se alteram ---
+        try {
+            System.out.println("\n--- Teste de transacoes recusadas ---");
+            int antes = usuario.getCarteira().getTotalTransacoes();
+
+            // compra acima do saldo em reais disponivel
+            usuario.getCarteira().registrarTransacao(new Transacao(5, "COMPRA", btc, 10.0, "2026-05-07"));
+            // venda acima da posicao em custodia
+            usuario.getCarteira().registrarTransacao(new Transacao(6, "VENDA", eth, 100.0, "2026-05-07"));
+
+            System.out.println("Transacoes antes: " + antes
+                    + " | depois das recusas: " + usuario.getCarteira().getTotalTransacoes());
+        } catch (Exception e) {
+            System.out.println("Erro no teste de recusa: " + e.getMessage());
         }
 
         // --- Saque com restricao de limite diario ACUMULADO na CarteiraPF ---

@@ -16,25 +16,30 @@
 
 -- ----------------------------------------------------------------------------
 -- 1.1 CARTEIRA (pai) + filhas CARTEIRA_PF / CARTEIRA_PJ
+--
+-- saldo_reais ja reflete as transacoes da secao 1.5, na mesma regra aplicada
+-- por Carteira.registrarTransacao: a compra debita bruto + taxa e a venda
+-- credita bruto - taxa. Ex.: carteira 1 = 250.000 de aportes - 175.175 (BTC)
+-- - 32.032 (ETH) + 34.965 (venda de BTC) = 77.758.
 -- ----------------------------------------------------------------------------
 -- Carteira PF do usuario Lucas  -> id_carteira = 1
 INSERT INTO carteira (id_carteira, descricao, saldo_reais, tipo)
-VALUES (seq_carteira.NEXTVAL, 'Carteira PF de Lucas', 15000, 'PF');
+VALUES (seq_carteira.NEXTVAL, 'Carteira PF de Lucas', 77758, 'PF');
 INSERT INTO carteira_pf (id_carteira_pf, limite_diario_saque) VALUES (1, 5000);
 
 -- Carteira PF da usuaria Ana    -> id_carteira = 2
 INSERT INTO carteira (id_carteira, descricao, saldo_reais, tipo)
-VALUES (seq_carteira.NEXTVAL, 'Carteira PF de Ana', 8000, 'PF');
+VALUES (seq_carteira.NEXTVAL, 'Carteira PF de Ana', 10991, 'PF');
 INSERT INTO carteira_pf (id_carteira_pf, limite_diario_saque) VALUES (2, 3000);
 
 -- Carteira PJ da ABCD Investimentos -> id_carteira = 3
 INSERT INTO carteira (id_carteira, descricao, saldo_reais, tipo)
-VALUES (seq_carteira.NEXTVAL, 'Carteira PJ - ABCD Investimentos', 50000, 'PJ');
+VALUES (seq_carteira.NEXTVAL, 'Carteira PJ - ABCD Investimentos', 29930, 'PJ');
 INSERT INTO carteira_pj (id_carteira_pj, regime_tributario) VALUES (3, 'LUCRO_PRESUMIDO');
 
 -- Carteira PJ da VOLTZ Holding      -> id_carteira = 4
 INSERT INTO carteira (id_carteira, descricao, saldo_reais, tipo)
-VALUES (seq_carteira.NEXTVAL, 'Carteira PJ - VOLTZ Holding', 120000, 'PJ');
+VALUES (seq_carteira.NEXTVAL, 'Carteira PJ - VOLTZ Holding', 92722.75, 'PJ');
 INSERT INTO carteira_pj (id_carteira_pj, regime_tributario) VALUES (4, 'LUCRO_REAL');
 
 -- ----------------------------------------------------------------------------
