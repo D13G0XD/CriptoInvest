@@ -120,7 +120,7 @@ src/com/criptoinvest/
     ├── Usuario.java        → Pessoa Física: 1:1 com CarteiraPF, 1:N com Empresa
     ├── Empresa.java        → Pessoa Jurídica: 1:1 com CarteiraPJ, N:1 com Usuario (dono)
     ├── Criptoativo.java    → Representa uma criptomoeda (BTC, ETH, etc.)
-    ├── Transacao.java      → Registro de compra, venda ou conversão (taxa de 0,1%)
+    ├── Transacao.java      → Registro de compra ou venda (taxa de 0,1%, com observação)
     ├── Posicao.java        → Associativa Carteira ↔ Criptoativo (saldo agregado)
     ├── Alerta.java         → Associativa Usuario ↔ Criptoativo (limite de variação)
     ├── Relatorio.java      → Snapshot de desempenho de uma carteira em determinada data
@@ -134,6 +134,15 @@ sql/
 ├── criptoinvest_ddl.sql  → DDL: DROP, CREATE (tabelas/sequences/índices) e ALTER (PKs, FKs, UKs)
 └── criptoinvest_dml.sql  → DML: INSERT (população), UPDATE, DELETE e SELECT (consultas gerenciais)
 ```
+
+Os dois scripts podem ser executados repetidas vezes:
+
+- o DDL abre com um bloco PL/SQL que consulta `user_tables` e `user_sequences` e só remove o
+  que existe, então não devolve `ORA-00942`/`ORA-02289` na primeira execução;
+- o DML não escreve nenhum id na mão. A PK sai da sequence e as FKs são resolvidas por
+  `CURRVAL` (quando a linha pai acabou de ser inserida) ou por subconsulta na chave natural —
+  `cpf`, `cnpj` e `sigla`, todas `UNIQUE`. Assim ele não depende de as sequences estarem
+  zeradas, o que quebrava o script quando os testes JDBC consumiam `seq_criptoativo` antes.
 
 ### Diagrama de Relacionamentos
 

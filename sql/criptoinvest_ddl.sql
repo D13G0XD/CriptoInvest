@@ -23,28 +23,46 @@
 
 -- ============================================================================
 -- 1. DROP - remocao dos objetos existentes (ordem reversa de dependencia)
---    Obs.: na primeira execucao os DROP retornam ORA-00942/ORA-02289
---          (objeto inexistente). E esperado, basta seguir o script.
+--
+--    O bloco so remove o que existe (consulta user_tables / user_sequences),
+--    entao o script roda igual na primeira execucao e nas seguintes, sem os
+--    ORA-00942/ORA-02289 de objeto inexistente.
 -- ============================================================================
-DROP TABLE alerta       CASCADE CONSTRAINTS;
-DROP TABLE posicao      CASCADE CONSTRAINTS;
-DROP TABLE relatorio    CASCADE CONSTRAINTS;
-DROP TABLE transacao    CASCADE CONSTRAINTS;
-DROP TABLE criptoativo  CASCADE CONSTRAINTS;
-DROP TABLE empresa      CASCADE CONSTRAINTS;
-DROP TABLE usuario      CASCADE CONSTRAINTS;
-DROP TABLE carteira_pj  CASCADE CONSTRAINTS;
-DROP TABLE carteira_pf  CASCADE CONSTRAINTS;
-DROP TABLE carteira     CASCADE CONSTRAINTS;
+DECLARE
+    -- ordem reversa de dependencia
+    TYPE lista IS VARRAY(10) OF VARCHAR2(30);
 
-DROP SEQUENCE seq_carteira;
-DROP SEQUENCE seq_usuario;
-DROP SEQUENCE seq_empresa;
-DROP SEQUENCE seq_criptoativo;
-DROP SEQUENCE seq_transacao;
-DROP SEQUENCE seq_relatorio;
-DROP SEQUENCE seq_alerta;
-DROP SEQUENCE seq_posicao;
+    tabelas   lista := lista('ALERTA', 'POSICAO', 'RELATORIO', 'TRANSACAO',
+                             'CRIPTOATIVO', 'EMPRESA', 'USUARIO',
+                             'CARTEIRA_PJ', 'CARTEIRA_PF', 'CARTEIRA');
+
+    sequences lista := lista('SEQ_CARTEIRA', 'SEQ_USUARIO', 'SEQ_EMPRESA',
+                             'SEQ_CRIPTOATIVO', 'SEQ_TRANSACAO', 'SEQ_RELATORIO',
+                             'SEQ_ALERTA', 'SEQ_POSICAO');
+
+    existentes NUMBER;
+BEGIN
+    FOR i IN 1 .. tabelas.COUNT LOOP
+        SELECT COUNT(*) INTO existentes
+          FROM user_tables
+         WHERE table_name = tabelas(i);
+
+        IF existentes > 0 THEN
+            EXECUTE IMMEDIATE 'DROP TABLE ' || tabelas(i) || ' CASCADE CONSTRAINTS';
+        END IF;
+    END LOOP;
+
+    FOR i IN 1 .. sequences.COUNT LOOP
+        SELECT COUNT(*) INTO existentes
+          FROM user_sequences
+         WHERE sequence_name = sequences(i);
+
+        IF existentes > 0 THEN
+            EXECUTE IMMEDIATE 'DROP SEQUENCE ' || sequences(i);
+        END IF;
+    END LOOP;
+END;
+/
 
 
 -- ============================================================================
@@ -151,6 +169,7 @@ CREATE TABLE transacao (
     preco_unitario NUMBER(18,8) NOT NULL,
     taxa           NUMBER(15,4) NOT NULL,
     data_operacao  DATE         NOT NULL,
+    observacao     VARCHAR2(200),
     CONSTRAINT pk_transacao       PRIMARY KEY (id_transacao),
     CONSTRAINT ck_transacao_tipo  CHECK (tipo IN ('COMPRA','VENDA')),
     CONSTRAINT ck_transacao_qtde  CHECK (quantidade > 0),
@@ -283,6 +302,7 @@ COMMENT ON TABLE  usuario                    IS 'Pessoa Fisica titular de uma ca
 COMMENT ON TABLE  empresa                    IS 'Pessoa Juridica pertencente a um usuario (1:N) e titular de uma carteira PJ (1:1)';
 COMMENT ON TABLE  criptoativo                IS 'Criptomoeda monitorada pela plataforma';
 COMMENT ON TABLE  transacao                  IS 'Evento de compra ou venda de criptoativo em uma carteira';
+COMMENT ON COLUMN transacao.observacao       IS 'Texto livre da operacao (Transacao.observacao)';
 COMMENT ON TABLE  relatorio                  IS 'Snapshot de desempenho de uma carteira em determinada data';
 COMMENT ON TABLE  posicao                    IS 'Associativa N:N Carteira x Criptoativo com o saldo agregado';
 COMMENT ON TABLE  alerta                     IS 'Associativa N:N Usuario x Criptoativo com o limite de variacao monitorado';
