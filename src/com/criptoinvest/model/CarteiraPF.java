@@ -1,5 +1,6 @@
 package com.criptoinvest.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -10,32 +11,44 @@ import java.time.LocalDate;
  */
 public class CarteiraPF extends Carteira {
 
-    private double limiteDiarioSaque;
-    private double saquesHoje;
+    private BigDecimal limiteDiarioSaque;
+    private BigDecimal saquesHoje;
     private String dataUltimoSaque;
 
-    public CarteiraPF(int id, String descricao, double saldoInicial, double limiteDiarioSaque) {
-        super(id, descricao, saldoInicial);
+    public CarteiraPF(String descricao, BigDecimal saldoInicial, BigDecimal limiteDiarioSaque) {
+        super(descricao, saldoInicial);
         // ck_carteira_pf_lim CHECK (limite_diario_saque >= 0)
-        this.limiteDiarioSaque = limiteDiarioSaque < 0 ? 0 : limiteDiarioSaque;
-        this.saquesHoje = 0;
+        this.limiteDiarioSaque = Valores.negativo(limiteDiarioSaque)
+                ? Valores.ZERO_DINHEIRO
+                : Valores.dinheiro(limiteDiarioSaque);
+        this.saquesHoje = Valores.ZERO_DINHEIRO;
         this.dataUltimoSaque = null;
     }
 
-    public CarteiraPF(int id, String descricao) {
-        this(id, descricao, 0, 5000);
+    /** Sobrecargas de conveniencia para os literais da demonstracao. */
+    public CarteiraPF(String descricao, double saldoInicial, double limiteDiarioSaque) {
+        this(descricao, Valores.de(saldoInicial), Valores.de(limiteDiarioSaque));
     }
 
-    public double getLimiteDiarioSaque() { return limiteDiarioSaque; }
-    public void setLimiteDiarioSaque(double limite) {
-        if (limite < 0) {
+    public CarteiraPF(String descricao) {
+        this(descricao, Valores.ZERO_DINHEIRO, Valores.de(5000));
+    }
+
+    public BigDecimal getLimiteDiarioSaque() { return limiteDiarioSaque; }
+
+    public void setLimiteDiarioSaque(BigDecimal limite) {
+        if (Valores.negativo(limite)) {
             System.out.println("Erro: limite nao pode ser negativo.");
             return;
         }
-        this.limiteDiarioSaque = limite;
+        this.limiteDiarioSaque = Valores.dinheiro(limite);
     }
 
-    public double getSaquesHoje() {
+    public void setLimiteDiarioSaque(double limite) {
+        setLimiteDiarioSaque(Valores.de(limite));
+    }
+
+    public BigDecimal getSaquesHoje() {
         resetarSeNovoDia();
         return saquesHoje;
     }
@@ -44,30 +57,32 @@ public class CarteiraPF extends Carteira {
     public String getTipo() { return "PF"; }
 
     @Override
-    public void sacar(double valor) {
-        if (valor <= 0) {
+    public void sacar(BigDecimal valor) {
+        if (Valores.naoPositivo(valor)) {
             System.out.println("Erro: valor deve ser positivo.");
             return;
         }
         resetarSeNovoDia();
-        double acumulado = saquesHoje + valor;
-        if (acumulado > limiteDiarioSaque) {
-            System.out.println("Erro: saque de R$ " + valor
-                    + " somado aos saques de hoje (R$ " + saquesHoje
-                    + ") excede o limite diario de R$ " + limiteDiarioSaque);
+
+        BigDecimal acumulado = saquesHoje.add(valor);
+        if (Valores.maior(acumulado, limiteDiarioSaque)) {
+            System.out.println("Erro: saque de R$ " + Valores.formatar(valor)
+                    + " somado aos saques de hoje (R$ " + Valores.formatar(saquesHoje)
+                    + ") excede o limite diario de R$ " + Valores.formatar(limiteDiarioSaque));
             return;
         }
-        double saldoAntes = getSaldoReais();
+
+        BigDecimal saldoAntes = getSaldoReais();
         super.sacar(valor);
-        if (getSaldoReais() < saldoAntes) {
-            saquesHoje += valor;
+        if (Valores.menor(getSaldoReais(), saldoAntes)) {
+            saquesHoje = Valores.dinheiro(acumulado);
         }
     }
 
     private void resetarSeNovoDia() {
         String hoje = LocalDate.now().toString();
         if (!hoje.equals(dataUltimoSaque)) {
-            saquesHoje = 0;
+            saquesHoje = Valores.ZERO_DINHEIRO;
             dataUltimoSaque = hoje;
         }
     }

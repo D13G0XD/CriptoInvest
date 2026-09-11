@@ -1,6 +1,8 @@
 package com.criptoinvest.model;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -13,20 +15,28 @@ import java.util.List;
  */
 public abstract class Carteira {
 
+    /**
+     * Gerador dos ids das carteiras, espelhando a sequence seq_carteira do banco.
+     * A tabela carteira e unica para PF e PJ, entao o id nao pode vir do titular:
+     * usuario 2 e empresa 2 gerariam a mesma PK.
+     */
+    private static int sequencia = 0;
+
     protected int idCarteira;          // PK
     protected String descricao;
-    protected double saldoReais;
+    protected BigDecimal saldoReais;
     protected List<Transacao> transacoes;
     protected List<Posicao> posicoes;
-    protected int proximoIdPosicao;
 
-    public Carteira(int id, String descricao, double saldoInicial) {
-        this.idCarteira = id;
+    protected Carteira(String descricao, BigDecimal saldoInicial) {
+        this.idCarteira = ++sequencia;
         this.descricao = descricao;
-        this.saldoReais = saldoInicial < 0 ? 0 : saldoInicial;
+        // ck_carteira_saldo CHECK (saldo_reais >= 0)
+        this.saldoReais = Valores.negativo(saldoInicial)
+                ? Valores.ZERO_DINHEIRO
+                : Valores.dinheiro(saldoInicial);
         this.transacoes = new ArrayList<>();
         this.posicoes = new ArrayList<>();
-        this.proximoIdPosicao = 1;
     }
 
     public int getIdCarteira() { return idCarteira; }
@@ -35,45 +45,63 @@ public abstract class Carteira {
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
 
-    public double getSaldoReais() { return saldoReais; }
+    public BigDecimal getSaldoReais() { return saldoReais; }
 
-    public List<Transacao> getTransacoes() { return transacoes; }
+    /** Somente leitura: o historico so muda por registrarTransacao(). */
+    public List<Transacao> getTransacoes() { return Collections.unmodifiableList(transacoes); }
     public int getTotalTransacoes() { return transacoes.size(); }
 
-    public List<Posicao> getPosicoes() { return posicoes; }
+    /** Somente leitura: as posicoes so mudam a partir das transacoes registradas. */
+    public List<Posicao> getPosicoes() { return Collections.unmodifiableList(posicoes); }
 
     /** Discriminador da heranca (carteira.tipo IN ('PF','PJ')). */
     public abstract String getTipo();
 
-    public void depositar(double valor) {
-        if (valor <= 0) {
+    public void depositar(BigDecimal valor) {
+        if (Valores.naoPositivo(valor)) {
             System.out.println("Erro: valor deve ser positivo.");
             return;
         }
-        this.saldoReais += valor;
-        System.out.println("Deposito de R$ " + valor + " em " + descricao + ". Saldo: R$ " + saldoReais);
+        this.saldoReais = Valores.dinheiro(saldoReais.add(valor));
+        System.out.println("Deposito de R$ " + Valores.formatar(valor) + " em " + descricao
+                + ". Saldo: R$ " + Valores.formatar(saldoReais));
+    }
+
+    public void depositar(BigDecimal valor, String descricaoOperacao) {
+        if (Valores.naoPositivo(valor)) {
+            System.out.println("Erro: valor deve ser positivo.");
+            return;
+        }
+        this.saldoReais = Valores.dinheiro(saldoReais.add(valor));
+        System.out.println("Deposito de R$ " + Valores.formatar(valor) + " (" + descricaoOperacao
+                + ") em " + descricao + ". Saldo: R$ " + Valores.formatar(saldoReais));
+    }
+
+    /** Sobrecargas de conveniencia para os literais da demonstracao. */
+    public void depositar(double valor) {
+        depositar(Valores.de(valor));
     }
 
     public void depositar(double valor, String descricaoOperacao) {
-        if (valor <= 0) {
-            System.out.println("Erro: valor deve ser positivo.");
-            return;
-        }
-        this.saldoReais += valor;
-        System.out.println("Deposito de R$ " + valor + " (" + descricaoOperacao + ") em " + descricao + ". Saldo: R$ " + saldoReais);
+        depositar(Valores.de(valor), descricaoOperacao);
     }
 
-    public void sacar(double valor) {
-        if (valor <= 0) {
+    public void sacar(BigDecimal valor) {
+        if (Valores.naoPositivo(valor)) {
             System.out.println("Erro: valor deve ser positivo.");
             return;
         }
-        if (valor > saldoReais) {
+        if (Valores.maior(valor, saldoReais)) {
             System.out.println("Erro: saldo insuficiente.");
             return;
         }
-        this.saldoReais -= valor;
-        System.out.println("Saque de R$ " + valor + " em " + descricao + ". Saldo: R$ " + saldoReais);
+        this.saldoReais = Valores.dinheiro(saldoReais.subtract(valor));
+        System.out.println("Saque de R$ " + Valores.formatar(valor) + " em " + descricao
+                + ". Saldo: R$ " + Valores.formatar(saldoReais));
+    }
+
+    public void sacar(double valor) {
+        sacar(Valores.de(valor));
     }
 
     public Posicao buscarPosicao(int idCripto) {
@@ -90,92 +118,143 @@ public abstract class Carteira {
         return null;
     }
 
-    public void registrarTransacao(Transacao transacao) {
+    /**
+     * Registra a transacao na carteira, movimentando o saldo em reais e a posicao
+     * em custodia: a compra debita o valor com taxa, a venda credita o liquido.
+     *
+     * A operacao so entra no historico depois de passar pelas duas validacoes -
+     * saldo em reais suficiente na compra e posicao suficiente na venda. Uma
+     * transacao recusada nao altera nada e nao contamina os totais de vendas,
+     * taxas, lucro e rentabilidade.
+     *
+     * @return true quando a transacao foi efetivada
+     */
+    public boolean registrarTransacao(Transacao transacao) {
+        if (transacao == null) {
+            System.out.println("Erro: transacao nula.");
+            return false;
+        }
+
+        boolean compra = "COMPRA".equals(transacao.getTipo());
+        BigDecimal valor = transacao.calcularValorComTaxa();
+
+        // ck_carteira_saldo CHECK (saldo_reais >= 0): a compra nao pode estourar o saldo
+        if (compra && Valores.maior(valor, saldoReais)) {
+            System.out.println("Erro: compra de "
+                    + transacao.getQuantidade().stripTrailingZeros().toPlainString() + " "
+                    + transacao.getCriptoativo().getSigla() + " recusada - saldo insuficiente (R$ "
+                    + Valores.formatar(saldoReais) + " disponivel, R$ "
+                    + Valores.formatar(valor) + " necessario).");
+            return false;
+        }
+        if (!aplicarNaPosicao(transacao)) {
+            return false;
+        }
+
+        this.saldoReais = Valores.dinheiro(compra ? saldoReais.subtract(valor) : saldoReais.add(valor));
         transacao.setCarteira(this);
         transacoes.add(transacao);
-        aplicarNaPosicao(transacao);
+        return true;
     }
 
-    public void registrarTransacao(Transacao transacao, String observacao) {
-        transacao.setObservacao(observacao);
-        registrarTransacao(transacao);
+    public boolean registrarTransacao(Transacao transacao, String observacao) {
+        if (transacao != null) {
+            transacao.setObservacao(observacao);
+        }
+        return registrarTransacao(transacao);
     }
 
-    private void aplicarNaPosicao(Transacao t) {
+    /**
+     * Aplica a transacao na posicao correspondente.
+     *
+     * @return true se a posicao aceitou a operacao; false quando a venda
+     *         excede o saldo em custodia (nada e alterado nesse caso)
+     */
+    private boolean aplicarNaPosicao(Transacao t) {
         Criptoativo c = t.getCriptoativo();
         Posicao p = buscarPosicao(c.getIdCripto());
 
         if ("COMPRA".equals(t.getTipo())) {
             if (p == null) {
-                p = new Posicao(proximoIdPosicao++, this, c,
-                        t.getQuantidade(), t.getPrecoUnitario(), t.getDataOperacao());
-                posicoes.add(p);
+                posicoes.add(new Posicao(this, c,
+                        t.getQuantidade(), t.getPrecoUnitario(), t.getDataOperacao()));
             } else {
                 p.aplicarCompra(t.getQuantidade(), t.getPrecoUnitario(), t.getDataOperacao());
             }
-        } else if ("VENDA".equals(t.getTipo())) {
-            if (p == null || p.getQuantidadeAtual() < t.getQuantidade()) {
-                System.out.println("Erro: venda de " + t.getQuantidade() + " "
-                        + c.getSigla() + " sem posicao suficiente.");
-                return;
-            }
-            p.aplicarVenda(t.getQuantidade(), t.getDataOperacao());
+            return true;
         }
+
+        if (p == null || Valores.menor(p.getQuantidadeAtual(), t.getQuantidade())) {
+            System.out.println("Erro: venda de "
+                    + t.getQuantidade().stripTrailingZeros().toPlainString() + " "
+                    + c.getSigla() + " recusada - sem posicao suficiente.");
+            return false;
+        }
+        p.aplicarVenda(t.getQuantidade(), t.getDataOperacao());
+        return true;
     }
 
-    public double calcularSaldoCripto(String sigla) {
+    public BigDecimal calcularSaldoCripto(String sigla) {
         Posicao p = buscarPosicao(sigla);
-        return p == null ? 0 : p.getQuantidadeAtual();
+        return p == null ? Valores.ZERO_CRIPTO : p.getQuantidadeAtual();
     }
 
-    public double calcularValorTotal() {
-        double total = 0;
-        for (Posicao p : posicoes) total += p.calcularValorAtual();
-        return total;
+    public BigDecimal calcularValorTotal() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (Posicao p : posicoes) total = total.add(p.calcularValorAtual());
+        return Valores.dinheiro(total);
     }
 
-    public double calcularTotalInvestido() {
-        double total = 0;
+    public BigDecimal calcularTotalInvestido() {
+        BigDecimal total = BigDecimal.ZERO;
         for (Transacao t : transacoes) {
-            if ("COMPRA".equals(t.getTipo())) total += t.calcularValorComTaxa();
+            if ("COMPRA".equals(t.getTipo())) total = total.add(t.calcularValorComTaxa());
         }
-        return total;
+        return Valores.dinheiro(total);
     }
 
-    public double calcularTotalVendido() {
-        double total = 0;
+    public BigDecimal calcularTotalVendido() {
+        BigDecimal total = BigDecimal.ZERO;
         for (Transacao t : transacoes) {
-            if ("VENDA".equals(t.getTipo())) total += t.calcularValorComTaxa();
+            if ("VENDA".equals(t.getTipo())) total = total.add(t.calcularValorComTaxa());
         }
-        return total;
+        return Valores.dinheiro(total);
     }
 
-    public double calcularTotalTaxas() {
-        double taxas = 0;
-        for (Transacao t : transacoes) taxas += t.getTaxa();
-        return taxas;
+    public BigDecimal calcularTotalTaxas() {
+        BigDecimal taxas = BigDecimal.ZERO;
+        for (Transacao t : transacoes) taxas = taxas.add(t.getTaxa());
+        return Valores.dinheiro(taxas);
     }
 
-    public double calcularLucroTotal() {
-        return calcularValorTotal() + calcularTotalVendido() - calcularTotalInvestido();
+    /**
+     * Lucro com as taxas ja descontadas: a compra entra por bruto + taxa e a
+     * venda por bruto - taxa, entao o valor abaixo NAO deve ser somado ou
+     * subtraido de calcularTotalTaxas() de novo.
+     */
+    public BigDecimal calcularLucroTotal() {
+        return Valores.dinheiro(
+                calcularValorTotal().add(calcularTotalVendido()).subtract(calcularTotalInvestido()));
     }
 
-    public double calcularRentabilidade() {
-        double investido = calcularTotalInvestido();
-        if (investido == 0) return 0;
-        return (calcularLucroTotal() / investido) * 100;
+    public BigDecimal calcularRentabilidade() {
+        BigDecimal investido = calcularTotalInvestido();
+        if (Valores.zero(investido)) return Valores.percentual(BigDecimal.ZERO);
+        return Valores.percentual(calcularLucroTotal()
+                .multiply(BigDecimal.valueOf(100))
+                .divide(investido, Valores.ESCALA_PERCENTUAL, Valores.ARREDONDAMENTO));
     }
 
     public void exibirResumo() {
         System.out.println("=== Carteira " + getTipo() + ": " + descricao + " ===");
-        System.out.println("Saldo em Reais: R$ " + String.format("%.2f", saldoReais));
+        System.out.println("Saldo em Reais: R$ " + Valores.formatar(saldoReais));
         System.out.println("Total de Transacoes: " + transacoes.size());
         System.out.println("Posicoes ativas: " + posicoes.size());
-        System.out.println("Total Investido: R$ " + String.format("%.2f", calcularTotalInvestido()));
-        System.out.println("Total Vendido: R$ " + String.format("%.2f", calcularTotalVendido()));
-        System.out.println("Valor Atual: R$ " + String.format("%.2f", calcularValorTotal()));
-        System.out.println("Taxas Pagas: R$ " + String.format("%.2f", calcularTotalTaxas()));
-        System.out.println("Lucro Total: R$ " + String.format("%.2f", calcularLucroTotal()));
+        System.out.println("Total Investido: R$ " + Valores.formatar(calcularTotalInvestido()));
+        System.out.println("Total Vendido: R$ " + Valores.formatar(calcularTotalVendido()));
+        System.out.println("Valor Atual: R$ " + Valores.formatar(calcularValorTotal()));
+        System.out.println("Taxas Pagas: R$ " + Valores.formatar(calcularTotalTaxas()));
+        System.out.println("Lucro Total: R$ " + Valores.formatar(calcularLucroTotal()));
         System.out.println("Rentabilidade: " + String.format("%.2f", calcularRentabilidade()) + "%");
     }
 }

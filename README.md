@@ -31,40 +31,121 @@ O mercado de criptoativos ultrapassou a marca de 2,5 trilhões de dólares em ca
 - **Relatórios e exportação** com relatórios diários de performance e exportação de dados.
 - **Alertas** configuráveis para variações de preço dos criptoativos monitorados.
 
+> As funcionalidades acima descrevem o **escopo do produto** definido na Fase 1. O que está
+> implementado até a Fase 5 é o modelo de domínio em Java, a persistência em arquivos texto,
+> o modelo relacional Oracle e a integração JDBC da classe `Criptoativo` — sem interface
+> gráfica, sem cotações em tempo real e sem a camada de segurança (2FA e criptografia são
+> requisitos de produto, ainda não implementados).
+
 ## Como Executar
 
-O projeto é Java puro, sem framework ou build tool. Compile e execute diretamente com `javac`/`java`.
+O projeto é Java puro. Compile e execute direto com `javac`/`java`; o Maven (`pom.xml`) é
+opcional e serve apenas para baixar o driver JDBC do Oracle usado na Fase 5.
 
 **Compilar:**
 ```
-javac src/com/criptoinvest/model/*.java -d out/
+javac -sourcepath src -d out src/com/criptoinvest/model/Main.java
 ```
+O `-sourcepath` faz o compilador puxar sozinho as classes dos três pacotes (`model`, `dao`
+e `factory`), sem precisar listar cada um.
 
 **Executar:**
 ```
-java -cp out/ com.criptoinvest.model.Main
+java -cp out com.criptoinvest.model.Main
 ```
 
-**Modelo relacional (Oracle):** o script DDL com tabelas, sequences, constraints e dados de exemplo está em `modelo/criptoinvest_ddl.sql`.
+Sem o driver do Oracle no classpath, as Fases 1 a 4 rodam normalmente e a Fase 5 apenas avisa
+que não há conexão, sem interromper a demonstração.
+
+### Compilar e executar com integração ao banco (Fase 5)
+
+A integração com o Oracle exige o driver JDBC (`ojdbc8`) no classpath. Há duas formas:
+
+**Com Maven (recomendado):**
+```
+mvn compile
+mvn exec:java
+```
+O `pom.xml` declara o `exec-maven-plugin` com versão fixa e já aponta a classe principal,
+então não é preciso passar `-Dexec.mainClass`.
+
+**Com javac/java + driver baixado manualmente em `lib/`:**
+```
+javac -cp lib/ojdbc8.jar -sourcepath src -d out src/com/criptoinvest/model/Main.java
+
+java -cp "out;lib/ojdbc8.jar" com.criptoinvest.model.Main   # Windows
+java -cp "out:lib/ojdbc8.jar" com.criptoinvest.model.Main   # Linux / macOS
+```
+Atenção ao separador do classpath: `;` no Windows e `:` no Linux e no macOS.
+
+### Credenciais do banco
+
+Crie um arquivo `.env` na raiz do projeto. Ele guarda credenciais reais, está listado no
+`.gitignore` e **nunca deve ser versionado**:
+```
+DB_URL = jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL
+DB_USER = rmXXXXXX
+DB_PASSWORD = ddmmaa
+```
+(no padrão da FIAP, o usuário é o RM do aluno e a senha é a data de nascimento em `ddmmaa`)
+
+A `ConnectionFactory` resolve cada dado na primeira fonte que o define:
+
+1. propriedades de sistema: `-Ddb.url`, `-Ddb.user`, `-Ddb.password`;
+2. o arquivo `.env` acima — procurado na pasta atual e em até três níveis acima, ou no caminho
+   indicado por `-Denv.file=/caminho/para/.env`;
+3. as constantes `_PADRAO` da própria classe.
+
+Assim dá para sobrepor o `.env` pontualmente, sem editá-lo:
+```
+java -Ddb.user=rmXXXXXX -Ddb.password=SUA_SENHA -cp "out;lib/ojdbc8.jar" com.criptoinvest.model.Main
+```
+
+**Scripts SQL (Oracle):** execute na ordem `sql/criptoinvest_ddl.sql` (estrutura) e depois
+`sql/criptoinvest_dml.sql` (dados e consultas).
 
 ## Estrutura de Classes
 
-Todas as classes estão no pacote `com.criptoinvest.model`:
+O código está dividido em três pacotes: o domínio em `com.criptoinvest.model`, o acesso a
+dados em `com.criptoinvest.dao` e a conexão em `com.criptoinvest.factory`.
 
 ```
-src/com/criptoinvest/model/
-├── Carteira.java       → Classe abstrata pai da herança (joined): saldo, transações, cálculos
-├── CarteiraPF.java     → Carteira de Pessoa Física (limite diário de saque)
-├── CarteiraPJ.java     → Carteira de Pessoa Jurídica (regime tributário)
-├── Usuario.java        → Pessoa Física: 1:1 com CarteiraPF, 1:N com Empresa
-├── Empresa.java        → Pessoa Jurídica: 1:1 com CarteiraPJ, N:1 com Usuario (dono)
-├── Criptoativo.java    → Representa uma criptomoeda (BTC, ETH, etc.)
-├── Transacao.java      → Registro de compra, venda ou conversão (taxa de 0,1%)
-├── Posicao.java        → Associativa Carteira ↔ Criptoativo (saldo agregado)
-├── Alerta.java         → Associativa Usuario ↔ Criptoativo (limite de variação)
-├── Relatorio.java      → Snapshot de desempenho de uma carteira em determinada data
-└── Main.java           → Ponto de entrada com demonstração de todas as funcionalidades
+src/com/criptoinvest/
+├── factory/
+│   └── ConnectionFactory.java  → Conexão com o Oracle da FIAP (URL, usuário, senha, timeout)
+├── dao/
+│   └── CriptoativoDAO.java     → CRUD da classe Criptoativo (INSERT/UPDATE/DELETE/SELECT)
+└── model/
+    ├── Carteira.java       → Classe abstrata pai da herança (joined): saldo, transações, cálculos
+    ├── CarteiraPF.java     → Carteira de Pessoa Física (limite diário de saque)
+    ├── CarteiraPJ.java     → Carteira de Pessoa Jurídica (regime tributário)
+    ├── Usuario.java        → Pessoa Física: 1:1 com CarteiraPF, 1:N com Empresa
+    ├── Empresa.java        → Pessoa Jurídica: 1:1 com CarteiraPJ, N:1 com Usuario (dono)
+    ├── Criptoativo.java    → Representa uma criptomoeda (BTC, ETH, etc.)
+    ├── Transacao.java      → Registro de compra ou venda (taxa de 0,1%, com observação)
+    ├── Posicao.java        → Associativa Carteira ↔ Criptoativo (saldo agregado)
+    ├── Alerta.java         → Associativa Usuario ↔ Criptoativo (limite de variação)
+    ├── Relatorio.java      → Snapshot imutável de desempenho de uma carteira numa data
+    ├── Valores.java        → Escalas e arredondamentos dos valores monetários (BigDecimal)
+    └── Main.java           → Ponto de entrada: demonstração do domínio + testes de banco
 ```
+
+### Scripts SQL
+
+```
+sql/
+├── criptoinvest_ddl.sql  → DDL: DROP, CREATE (tabelas/sequences/índices) e ALTER (PKs, FKs, UKs)
+└── criptoinvest_dml.sql  → DML: INSERT (população), UPDATE, DELETE e SELECT (consultas gerenciais)
+```
+
+Os dois scripts podem ser executados repetidas vezes:
+
+- o DDL abre com um bloco PL/SQL que consulta `user_tables` e `user_sequences` e só remove o
+  que existe, então não devolve `ORA-00942`/`ORA-02289` na primeira execução;
+- o DML não escreve nenhum id na mão. A PK sai da sequence e as FKs são resolvidas por
+  `CURRVAL` (quando a linha pai acabou de ser inserida) ou por subconsulta na chave natural —
+  `cpf`, `cnpj` e `sigla`, todas `UNIQUE`. Assim ele não depende de as sequences estarem
+  zeradas, o que quebrava o script quando os testes JDBC consumiam `seq_criptoativo` antes.
 
 ### Diagrama de Relacionamentos
 
@@ -112,6 +193,19 @@ src/com/criptoinvest/model/
 
 A herança foi modelada na **carteira**, não no titular: `Carteira` (pai abstrato) tem como filhas `CarteiraPF` e `CarteiraPJ`. No banco, isso vira três tabelas — `carteira` (atributos comuns + discriminador `tipo`), `carteira_pf` (PK/FK ligando-se à pai, com `limite_diario_saque`) e `carteira_pj` (PK/FK ligando-se à pai, com `regime_tributario`). Tabelas filhas como `transacao`, `posicao`, `relatorio` referenciam a tabela pai `carteira`, mantendo a FK polimórfica.
 
+Como `carteira` é uma tabela única para PF e PJ, o id da carteira **não** vem do titular: `Carteira` gera o seu próprio id a partir de um contador estático, espelhando a sequence `seq_carteira`. `Posicao` segue a mesma regra (`seq_posicao`), com contador único para todo o sistema — um contador por carteira faria duas carteiras diferentes gerarem a mesma PK.
+
+#### Regras de negócio da `Carteira`
+
+`registrarTransacao` movimenta as duas pontas de uma vez — o saldo em reais e a posição em custódia — e só grava a operação no histórico depois de validar as duas:
+
+| Operação | Saldo em reais | Posição | Recusada quando |
+|---|---|---|---|
+| `COMPRA` | debita `bruto + taxa` | soma a quantidade e recalcula o preço médio | o saldo em reais não cobre o valor com taxa (`ck_carteira_saldo`) |
+| `VENDA`  | credita `bruto - taxa` | subtrai a quantidade | a posição em custódia é menor que a quantidade vendida |
+
+Uma transação recusada não altera nada e não entra no histórico, então os totais de vendas, taxas, lucro e rentabilidade nunca contam uma operação que não aconteceu. O método devolve `boolean` informando se a operação foi efetivada.
+
 ## Conceitos de POO Aplicados
 
 | Conceito | Implementação |
@@ -119,13 +213,19 @@ A herança foi modelada na **carteira**, não no titular: `Carteira` (pai abstra
 | **Encapsulamento** | Todos os campos são `private`/`protected`, acessados via getters/setters |
 | **Herança** | `CarteiraPF` e `CarteiraPJ` estendem `Carteira` (joined inheritance) |
 | **Polimorfismo dinâmico** | `getTipo()` abstrato em `Carteira`, sobrescrito nas filhas; `sacar()` sobrescrito em `CarteiraPF` para aplicar limite diário |
-| **Polimorfismo estático** | Sobrecarga de `depositar`, `registrarTransacao` e `atualizarPreco` |
+| **Polimorfismo estático** | Sobrecarga de `depositar`, `sacar`, `registrarTransacao` e `atualizarPreco`, e os construtores que aceitam `double` ou `BigDecimal` |
+| **Imutabilidade** | `Relatorio` fecha os números no construtor: campos `final`, sem setters — um snapshot não pode se contradizer |
 
 ## Tecnologias
 
 - **Linguagem:** Java SE
-- **JDK:** OpenJDK 26
-- **Banco de Dados:** Oracle 19c+ (DDL em `modelo/criptoinvest_ddl.sql`)
+- **JDK:** compilado para Java 17 (`maven.compiler.source/target` no `pom.xml`); testado no OpenJDK 26
+- **Banco de Dados:** Oracle 19c+ (FIAP) — scripts em `sql/`
+- **Acesso a dados:** JDBC puro (driver `ojdbc8`), padrão DAO + Connection Factory
+- **Valores monetários:** `BigDecimal` com as escalas do DDL (2 para reais, 8 para cripto,
+  4 para percentuais) — `double` não representa 0,10 exatamente e o erro se acumula a cada
+  operação da carteira
+- **Build:** Maven (`pom.xml`) ou `javac`/`java` com o driver no classpath
 
 ## Equipe VOLTZ
 
@@ -145,3 +245,20 @@ A herança foi modelada na **carteira**, não no titular: `Carteira` (pai abstra
 | Sprint 2 — Fase 2 | Classes Java + Diagrama de Classes |
 | Sprint 3 — Fase 3 | Encapsulamento, Herança, Polimorfismo e Classe Main |
 | Sprint 4 — Fase 4 | Modelo Relacional SQL (DDL Oracle, herança joined em Carteira); Normalização 1FN/2FN/3FN (`modelo/Normalizacao.pdf`); persistência em arquivos texto a partir de `ArrayList` e `HashMap` na `Main` |
+| Sprint 5 — Fase 5 | Script DDL (`sql/criptoinvest_ddl.sql`) e script DML (`sql/criptoinvest_dml.sql`); classe de conexão com o Oracle da FIAP (`ConnectionFactory`); integração completa da classe `Criptoativo` com o banco (`CriptoativoDAO`: inserir, alterar, excluir e exibir); métodos de teste dessa integração na `Main` |
+
+## Fase 5 — Integração com Banco de Dados
+
+**Classe escolhida para a integração:** `Criptoativo` → tabela `CRIPTOATIVO`.
+
+| Operação | Método do `CriptoativoDAO` | Comando SQL | Método de teste na `Main` |
+|---|---|---|---|
+| Inserir | `inserir(Criptoativo)` | `INSERT` (id via `seq_criptoativo.NEXTVAL`) | `testarInserir()` |
+| Exibir todos | `listarTodos()` | `SELECT ... ORDER BY id_cripto` | `testarExibirTodos()` |
+| Exibir um | `buscarPorId(int)` / `buscarPorSigla(String)` | `SELECT ... WHERE` | `testarExibirPorId()` |
+| Alterar | `alterar(Criptoativo)` | `UPDATE` | `testarAlterar()` |
+| Excluir | `excluir(int)` | `DELETE` | `testarExcluir()` |
+
+A `Main` chama `executarTestesBancoDeDados()`, que testa a conexão e, em seguida, executa
+inserção → listagem → busca por id → alteração → exclusão → listagem final. Se o banco não
+estiver acessível, a aplicação avisa e segue sem interromper a demonstração das demais fases.

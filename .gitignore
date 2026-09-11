@@ -1,8 +1,10 @@
 ### IntelliJ IDEA ###
 out/
+target/
 !**/src/main/**/out/
 !**/src/test/**/out/
-.idea/inspectionProfiles/
+.idea/
+*.iml
 
 
 ### Eclipse ###
@@ -34,7 +36,7 @@ bin/
 CLAUDE.md
 .claude/
 
-### IntelliJ (config local por usuario) ###
-.idea/workspace.xml
-
 *.txt
+
+### Credenciais locais (NUNCA versionar) ###
+.env
