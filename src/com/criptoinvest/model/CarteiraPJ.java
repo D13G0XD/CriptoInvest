@@ -1,5 +1,7 @@
 package com.criptoinvest.model;
 
+import java.math.BigDecimal;
+
 /**
  * Carteira de Pessoa Juridica - filha de Carteira (heranca joined).
  * Atributo proprio: regime tributario (SIMPLES, LUCRO_PRESUMIDO, LUCRO_REAL).
@@ -10,7 +12,7 @@ public class CarteiraPJ extends Carteira {
 
     private String regimeTributario;
 
-    public CarteiraPJ(String descricao, double saldoInicial, String regimeTributario) {
+    public CarteiraPJ(String descricao, BigDecimal saldoInicial, String regimeTributario) {
         super(descricao, saldoInicial);
         if (regimeValido(regimeTributario)) {
             this.regimeTributario = regimeTributario;
@@ -20,8 +22,13 @@ public class CarteiraPJ extends Carteira {
         }
     }
 
+    /** Sobrecargas de conveniencia para os literais da demonstracao. */
+    public CarteiraPJ(String descricao, double saldoInicial, String regimeTributario) {
+        this(descricao, Valores.de(saldoInicial), regimeTributario);
+    }
+
     public CarteiraPJ(String descricao) {
-        this(descricao, 0, "SIMPLES");
+        this(descricao, Valores.ZERO_DINHEIRO, "SIMPLES");
     }
 
     public String getRegimeTributario() { return regimeTributario; }

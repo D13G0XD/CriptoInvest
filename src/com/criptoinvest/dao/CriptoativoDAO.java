@@ -3,6 +3,7 @@ package com.criptoinvest.dao;
 import com.criptoinvest.factory.ConnectionFactory;
 import com.criptoinvest.model.Criptoativo;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -74,8 +75,8 @@ public class CriptoativoDAO {
                 ps.setInt(1, id);
                 ps.setString(2, criptoativo.getNome());
                 ps.setString(3, criptoativo.getSigla());
-                ps.setDouble(4, criptoativo.getPrecoAtual());
-                ps.setDouble(5, criptoativo.getVariacao24h());
+                ps.setBigDecimal(4, criptoativo.getPrecoAtual());
+                ps.setBigDecimal(5, criptoativo.getVariacao24h());
                 ps.setString(6, criptoativo.getCategoria());
                 ps.executeUpdate();
             }
@@ -109,8 +110,8 @@ public class CriptoativoDAO {
 
             ps.setString(1, criptoativo.getNome());
             ps.setString(2, criptoativo.getSigla());
-            ps.setDouble(3, criptoativo.getPrecoAtual());
-            ps.setDouble(4, criptoativo.getVariacao24h());
+            ps.setBigDecimal(3, criptoativo.getPrecoAtual());
+            ps.setBigDecimal(4, criptoativo.getVariacao24h());
             ps.setString(5, criptoativo.getCategoria());
             ps.setInt(6, criptoativo.getIdCripto());
 
@@ -179,16 +180,23 @@ public class CriptoativoDAO {
         return criptoativos;
     }
 
-    /** Converte a linha atual do ResultSet em um objeto Criptoativo. */
+    /**
+     * Converte a linha atual do ResultSet em um objeto Criptoativo.
+     * Usa getBigDecimal, e nao getDouble: NUMBER(18,8) nao cabe em double sem
+     * perda, e o dominio trabalha em BigDecimal (ver Valores).
+     */
     private Criptoativo montarCriptoativo(ResultSet rs) throws SQLException {
+        BigDecimal preco = rs.getBigDecimal("preco_atual");
+        BigDecimal variacao = rs.getBigDecimal("variacao_24h");
+
         Criptoativo criptoativo = new Criptoativo(
                 rs.getInt("id_cripto"),
                 rs.getString("nome"),
                 rs.getString("sigla"),
-                rs.getDouble("preco_atual"),
+                preco,
                 rs.getString("categoria"));
 
-        criptoativo.setVariacao24h(rs.getDouble("variacao_24h"));
+        criptoativo.setVariacao24h(variacao);
         return criptoativo;
     }
 }

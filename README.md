@@ -64,8 +64,10 @@ A integração com o Oracle exige o driver JDBC (`ojdbc8`) no classpath. Há dua
 **Com Maven (recomendado):**
 ```
 mvn compile
-mvn exec:java -Dexec.mainClass=com.criptoinvest.model.Main
+mvn exec:java
 ```
+O `pom.xml` declara o `exec-maven-plugin` com versão fixa e já aponta a classe principal,
+então não é preciso passar `-Dexec.mainClass`.
 
 **Com javac/java + driver baixado manualmente em `lib/`:**
 ```
@@ -123,7 +125,8 @@ src/com/criptoinvest/
     ├── Transacao.java      → Registro de compra ou venda (taxa de 0,1%, com observação)
     ├── Posicao.java        → Associativa Carteira ↔ Criptoativo (saldo agregado)
     ├── Alerta.java         → Associativa Usuario ↔ Criptoativo (limite de variação)
-    ├── Relatorio.java      → Snapshot de desempenho de uma carteira em determinada data
+    ├── Relatorio.java      → Snapshot imutável de desempenho de uma carteira numa data
+    ├── Valores.java        → Escalas e arredondamentos dos valores monetários (BigDecimal)
     └── Main.java           → Ponto de entrada: demonstração do domínio + testes de banco
 ```
 
@@ -210,7 +213,8 @@ Uma transação recusada não altera nada e não entra no histórico, então os 
 | **Encapsulamento** | Todos os campos são `private`/`protected`, acessados via getters/setters |
 | **Herança** | `CarteiraPF` e `CarteiraPJ` estendem `Carteira` (joined inheritance) |
 | **Polimorfismo dinâmico** | `getTipo()` abstrato em `Carteira`, sobrescrito nas filhas; `sacar()` sobrescrito em `CarteiraPF` para aplicar limite diário |
-| **Polimorfismo estático** | Sobrecarga de `depositar`, `registrarTransacao` e `atualizarPreco` |
+| **Polimorfismo estático** | Sobrecarga de `depositar`, `sacar`, `registrarTransacao` e `atualizarPreco`, e os construtores que aceitam `double` ou `BigDecimal` |
+| **Imutabilidade** | `Relatorio` fecha os números no construtor: campos `final`, sem setters — um snapshot não pode se contradizer |
 
 ## Tecnologias
 
@@ -218,6 +222,9 @@ Uma transação recusada não altera nada e não entra no histórico, então os 
 - **JDK:** compilado para Java 17 (`maven.compiler.source/target` no `pom.xml`); testado no OpenJDK 26
 - **Banco de Dados:** Oracle 19c+ (FIAP) — scripts em `sql/`
 - **Acesso a dados:** JDBC puro (driver `ojdbc8`), padrão DAO + Connection Factory
+- **Valores monetários:** `BigDecimal` com as escalas do DDL (2 para reais, 8 para cripto,
+  4 para percentuais) — `double` não representa 0,10 exatamente e o erro se acumula a cada
+  operação da carteira
 - **Build:** Maven (`pom.xml`) ou `javac`/`java` com o driver no classpath
 
 ## Equipe VOLTZ

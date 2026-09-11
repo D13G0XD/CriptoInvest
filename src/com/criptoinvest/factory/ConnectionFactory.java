@@ -25,7 +25,7 @@ import java.util.Map;
  *      java -Ddb.user=rmXXXXXX -Ddb.password=ddmmaa -cp ... com.criptoinvest.model.Main
  *
  *   2) Arquivo .env na raiz do projeto (NAO versionado - ver .gitignore):
- *      DB_URL = jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl
+ *      DB_URL = jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL
  *      DB_USER = rmXXXXXX
  *      DB_PASSWORD = ddmmaa
  *
@@ -45,7 +45,12 @@ public class ConnectionFactory {
     /** Senha do banco (padrao FIAP: data de nascimento ddmmaa). Informe a sua no .env. */
     private static final String SENHA_PADRAO = "SUA_SENHA";
 
-    private static final String DRIVER = "oracle.jdbc.driver.OracleDriver";
+    /**
+     * Desde o JDBC 4 o driver se registra sozinho pelo ServiceLoader, entao o
+     * Class.forName do bloco estatico nao e obrigatorio - ele fica so para
+     * avisar cedo, e com mensagem clara, quando o ojdbc nao esta no classpath.
+     */
+    private static final String DRIVER = "oracle.jdbc.OracleDriver";
 
     /** Tempo maximo (em segundos) de espera pela abertura da conexao. */
     private static final int TIMEOUT_LOGIN = 15;

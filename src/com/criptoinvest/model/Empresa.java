@@ -24,7 +24,7 @@ public class Empresa {
         this.nome = razaoSocial;
         this.cnpj = cnpj;
         this.dono = dono;
-        this.carteira = new CarteiraPJ("Carteira PJ - " + razaoSocial, 0, regimeTributario);
+        this.carteira = new CarteiraPJ("Carteira PJ - " + razaoSocial, Valores.ZERO_DINHEIRO, regimeTributario);
     }
 
     public int getId() { return id; }

@@ -1,5 +1,6 @@
 package com.criptoinvest.model;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +21,7 @@ public class Usuario {
     private List<Empresa> empresas;
 
     public Usuario(int id, String nome, String email, String senha, String cpf,
-                   double saldoInicial, double limiteDiarioSaque) {
+                   BigDecimal saldoInicial, BigDecimal limiteDiarioSaque) {
         this.id = id;
         this.nome = nome;
         this.carteira = new CarteiraPF("Carteira PF de " + nome, saldoInicial, limiteDiarioSaque);
@@ -31,8 +32,14 @@ public class Usuario {
         this.empresas = new ArrayList<>();
     }
 
+    /** Sobrecargas de conveniencia para os literais da demonstracao. */
+    public Usuario(int id, String nome, String email, String senha, String cpf,
+                   double saldoInicial, double limiteDiarioSaque) {
+        this(id, nome, email, senha, cpf, Valores.de(saldoInicial), Valores.de(limiteDiarioSaque));
+    }
+
     public Usuario(int id, String nome, String email, String senha, String cpf) {
-        this(id, nome, email, senha, cpf, 0, 5000);
+        this(id, nome, email, senha, cpf, Valores.ZERO_DINHEIRO, Valores.de(5000));
     }
 
     public int getId() { return id; }
@@ -66,7 +73,7 @@ public class Usuario {
         System.out.println("Email: " + email);
         System.out.println("CPF: " + cpf);
         System.out.println("2FA: " + autenticacaoDoisFatores);
-        System.out.println("Saldo em Reais (carteira PF): R$ " + String.format("%.2f", carteira.getSaldoReais()));
+        System.out.println("Saldo em Reais (carteira PF): R$ " + Valores.formatar(carteira.getSaldoReais()));
         System.out.println("Empresas: " + empresas.size());
     }
 }

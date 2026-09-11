@@ -1,27 +1,34 @@
 package com.criptoinvest.model;
 
+import java.math.BigDecimal;
+
 public class Criptoativo {
 
     private int idCripto;        // PK
     private String nome;
     private String sigla;
-    private double precoAtual;
-    private double variacao24h;
+    private BigDecimal precoAtual;
+    private BigDecimal variacao24h;
     private String categoria;
 
-    public Criptoativo(int id, String nome, String sigla, double precoAtual, String categoria) {
+    public Criptoativo(int id, String nome, String sigla, BigDecimal precoAtual, String categoria) {
         this.idCripto = id;
         this.nome = nome;
         this.sigla = sigla;
         // ck_criptoativo_preco CHECK (preco_atual >= 0)
-        if (precoAtual < 0) {
+        if (Valores.negativo(precoAtual)) {
             System.out.println("Aviso: preco_atual negativo, ajustado para 0.");
-            this.precoAtual = 0;
+            this.precoAtual = Valores.ZERO_CRIPTO;
         } else {
-            this.precoAtual = precoAtual;
+            this.precoAtual = Valores.cripto(precoAtual);
         }
-        this.variacao24h = 0;
+        this.variacao24h = Valores.percentual(BigDecimal.ZERO);
         this.categoria = categoria;
+    }
+
+    /** Sobrecarga de conveniencia para os literais da demonstracao. */
+    public Criptoativo(int id, String nome, String sigla, double precoAtual, String categoria) {
+        this(id, nome, sigla, Valores.de(precoAtual), categoria);
     }
 
     public int getIdCripto() {
@@ -48,25 +55,73 @@ public class Criptoativo {
         this.sigla = sigla;
     }
 
-    public double getPrecoAtual() {
+    public BigDecimal getPrecoAtual() {
         return precoAtual;
     }
 
-    public void setPrecoAtual(double precoAtual) {
+    public void setPrecoAtual(BigDecimal precoAtual) {
         // ck_criptoativo_preco CHECK (preco_atual >= 0)
-        if (precoAtual < 0) {
+        if (Valores.negativo(precoAtual)) {
             System.out.println("Erro: preco_atual nao pode ser negativo.");
             return;
         }
-        this.precoAtual = precoAtual;
+        this.precoAtual = Valores.cripto(precoAtual);
     }
 
-    public double getVariacao24h() {
+    public BigDecimal getVariacao24h() {
         return variacao24h;
     }
 
+    public void setVariacao24h(BigDecimal variacao24h) {
+        this.variacao24h = Valores.percentual(variacao24h);
+    }
+
     public void setVariacao24h(double variacao24h) {
-        this.variacao24h = variacao24h;
+        setVariacao24h(Valores.de(variacao24h));
+    }
+
+    /** Atualiza o preco calculando a variacao a partir do preco anterior. */
+    public void atualizarPreco(BigDecimal novoPreco) {
+        if (Valores.negativo(novoPreco)) {
+            System.out.println("Erro: preco nao pode ser negativo.");
+            return;
+        }
+
+        if (Valores.zero(this.precoAtual)) {
+            this.variacao24h = Valores.percentual(BigDecimal.ZERO);
+        } else {
+            BigDecimal diferenca = Valores.ouZero(novoPreco).subtract(this.precoAtual);
+            this.variacao24h = Valores.percentual(
+                    diferenca.multiply(BigDecimal.valueOf(100))
+                             .divide(this.precoAtual, Valores.ESCALA_PERCENTUAL, Valores.ARREDONDAMENTO));
+        }
+        this.precoAtual = Valores.cripto(novoPreco);
+    }
+
+    public void atualizarPreco(double novoPreco) {
+        atualizarPreco(Valores.de(novoPreco));
+    }
+
+    /** Atualiza o preco com uma variacao informada pela fonte de cotacao. */
+    public void atualizarPreco(BigDecimal novoPreco, BigDecimal variacao) {
+        if (Valores.negativo(novoPreco)) {
+            System.out.println("Erro: preco nao pode ser negativo.");
+            return;
+        }
+        this.precoAtual = Valores.cripto(novoPreco);
+        this.variacao24h = Valores.percentual(variacao);
+    }
+
+    public void atualizarPreco(double novoPreco, double variacao) {
+        atualizarPreco(Valores.de(novoPreco), Valores.de(variacao));
+    }
+
+    public void exibirDados() {
+        System.out.println("=== Criptoativo ===");
+        System.out.println("Nome: " + nome + " (" + sigla + ")");
+        System.out.println("Categoria: " + categoria);
+        System.out.println("Preco Atual: R$ " + Valores.formatar(precoAtual));
+        System.out.println("Variacao 24h: " + String.format("%.2f", variacao24h) + "%");
     }
 
     public String getCategoria() {
@@ -75,36 +130,5 @@ public class Criptoativo {
 
     public void setCategoria(String categoria) {
         this.categoria = categoria;
-    }
-
-    public void atualizarPreco(double novoPreco) {
-        if (novoPreco < 0) {
-            System.out.println("Erro: preco nao pode ser negativo.");
-            return;
-        }
-
-        if (this.precoAtual == 0) {
-            this.variacao24h = 0;
-        } else {
-            this.variacao24h = ((novoPreco - this.precoAtual) / this.precoAtual) * 100;
-        }
-        this.precoAtual = novoPreco;
-    }
-
-    public void atualizarPreco(double novoPreco, double variacao) {
-        if (novoPreco < 0) {
-            System.out.println("Erro: preco nao pode ser negativo.");
-            return;
-        }
-        this.precoAtual = novoPreco;
-        this.variacao24h = variacao;
-    }
-
-    public void exibirDados() {
-        System.out.println("=== Criptoativo ===");
-        System.out.println("Nome: " + nome + " (" + sigla + ")");
-        System.out.println("Categoria: " + categoria);
-        System.out.println("Preco Atual: R$ " + precoAtual);
-        System.out.println("Variacao 24h: " + String.format("%.2f", variacao24h) + "%");
     }
 }

@@ -268,6 +268,11 @@ DELETE FROM alerta
  WHERE ativado = 'N';
 
 -- 3.2 Remove as transacoes de venda da carteira PF do Lucas
+--     As linhas de RELATORIO nao sao recalculadas de proposito: relatorio e um
+--     snapshot fechado em data_geracao, e nao uma visao derivada das transacoes
+--     (por isso guarda os totais em colunas proprias). Depois deste DELETE a
+--     consulta 4.10 ainda mostra total_vendido = 34965, que era o valor correto
+--     na data do relatorio.
 DELETE FROM transacao
  WHERE id_carteira = (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-00')
    AND tipo        = 'VENDA';

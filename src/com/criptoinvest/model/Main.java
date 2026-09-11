@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class Main {
+public class    Main {
 
     public static void main(String[] args) {
 
@@ -87,7 +87,7 @@ public class Main {
             System.out.println("\n--- Polimorfismo: iterando Carteira[] ---");
             for (Carteira c : carteiras) {
                 System.out.println("[Tipo " + c.getTipo() + "] " + c.getDescricao()
-                        + " | Saldo R$ " + String.format("%.2f", c.getSaldoReais()));
+                        + " | Saldo R$ " + Valores.formatar(c.getSaldoReais()));
             }
         } catch (Exception e) {
             System.out.println("Erro no polimorfismo: " + e.getMessage());
@@ -264,14 +264,14 @@ public class Main {
             while ((linha = br.readLine()) != null) {
                 String[] campos = linha.split("\\|");
                 String sigla     = campos[2];
-                double precoBase = Double.parseDouble(campos[3]);
-                double novoPreco = precoBase * 1.05;
+                java.math.BigDecimal precoBase = new java.math.BigDecimal(campos[3]);
+                java.math.BigDecimal novoPreco = precoBase.multiply(new java.math.BigDecimal("1.05"));
                 Criptoativo c = mapCriptoativos.get(sigla);
                 if (c != null) {
                     c.atualizarPreco(novoPreco);
                     System.out.println("Atualizado: " + sigla
-                            + " | Preco anterior: R$ " + String.format("%.2f", precoBase)
-                            + " -> Novo preco: R$ " + String.format("%.2f", c.getPrecoAtual()));
+                            + " | Preco anterior: R$ " + Valores.formatar(precoBase)
+                            + " -> Novo preco: R$ " + Valores.formatar(c.getPrecoAtual()));
                 }
             }
         } catch (IOException e) {

@@ -19,6 +19,25 @@
     <build>
         <!-- O projeto mantem os fontes na pasta src (sem layout Maven padrao) -->
         <sourceDirectory>src</sourceDirectory>
+
+        <plugins>
+            <!-- Versoes fixas: o build nao muda de comportamento conforme o ambiente -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+
+            <!-- mvn exec:java roda a Main sem precisar de -Dexec.mainClass -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <mainClass>com.criptoinvest.model.Main</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 
     <dependencies>

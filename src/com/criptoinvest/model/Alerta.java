@@ -1,5 +1,7 @@
 package com.criptoinvest.model;
 
+import java.math.BigDecimal;
+
 /**
  * Entidade associativa que resolve o relacionamento N:N entre Usuario e Criptoativo.
  * Um Usuario pode configurar varios Alertas sobre criptos diferentes, e um Criptoativo
@@ -15,26 +17,32 @@ public class Alerta {
     private Usuario usuario;          // FK -> Usuario (idUsuario) - obrigatoria
     private Criptoativo criptoativo;  // FK -> Criptoativo (idCripto) - obrigatoria
 
-    private double limiteVariacao;
+    private BigDecimal limiteVariacao;
     private boolean ativado;
     private String dataConfiguracao;
 
     public Alerta(int id, Usuario usuario, Criptoativo criptoativo,
-                  double limiteVariacao, String dataConfiguracao) {
+                  BigDecimal limiteVariacao, String dataConfiguracao) {
         if (usuario == null || criptoativo == null) {
             throw new IllegalArgumentException("Alerta exige usuario e criptoativo.");
         }
         this.idAlerta = id;
         this.usuario = usuario;
         this.criptoativo = criptoativo;
-        if (limiteVariacao <= 0) {
+        if (Valores.naoPositivo(limiteVariacao)) {
             System.out.println("Aviso: limiteVariacao deve ser positivo, ajustado para 5%.");
-            this.limiteVariacao = 5.0;
+            this.limiteVariacao = Valores.percentual(Valores.de(5));
         } else {
-            this.limiteVariacao = limiteVariacao;
+            this.limiteVariacao = Valores.percentual(limiteVariacao);
         }
         this.dataConfiguracao = dataConfiguracao;
         this.ativado = true;
+    }
+
+    /** Sobrecarga de conveniencia para os literais da demonstracao. */
+    public Alerta(int id, Usuario usuario, Criptoativo criptoativo,
+                  double limiteVariacao, String dataConfiguracao) {
+        this(id, usuario, criptoativo, Valores.de(limiteVariacao), dataConfiguracao);
     }
 
     public int getIdAlerta() { return idAlerta; }
@@ -49,13 +57,17 @@ public class Alerta {
     public boolean isAtivado() { return ativado; }
     public void setAtivado(boolean ativado) { this.ativado = ativado; }
 
-    public double getLimiteVariacao() { return limiteVariacao; }
-    public void setLimiteVariacao(double limiteVariacao) {
-        if (limiteVariacao <= 0) {
+    public BigDecimal getLimiteVariacao() { return limiteVariacao; }
+    public void setLimiteVariacao(BigDecimal limiteVariacao) {
+        if (Valores.naoPositivo(limiteVariacao)) {
             System.out.println("Erro: limiteVariacao deve ser positivo.");
             return;
         }
-        this.limiteVariacao = limiteVariacao;
+        this.limiteVariacao = Valores.percentual(limiteVariacao);
+    }
+
+    public void setLimiteVariacao(double limiteVariacao) {
+        setLimiteVariacao(Valores.de(limiteVariacao));
     }
 
     public String getDataConfiguracao() { return dataConfiguracao; }
@@ -64,13 +76,9 @@ public class Alerta {
     public boolean verificarDisparo() {
         if (!ativado) return false;
 
-        double variacao = criptoativo.getVariacao24h();
-
-        if (variacao >= limiteVariacao || variacao <= -limiteVariacao) {
-            return true;
-        }
-
-        return false;
+        // mesma regra da consulta 4.9 do DML: ABS(variacao_24h) >= limite_variacao
+        BigDecimal variacao = criptoativo.getVariacao24h();
+        return variacao.abs().compareTo(limiteVariacao) >= 0;
     }
 
     public String mensagemAlerta() {
@@ -78,11 +86,11 @@ public class Alerta {
             return "Nenhum alerta no momento.";
         }
 
-        String direcao = criptoativo.getVariacao24h() > 0 ? "subiu" : "caiu";
+        String direcao = criptoativo.getVariacao24h().signum() > 0 ? "subiu" : "caiu";
 
         return "ALERTA para " + usuario.getNome() + ": " + criptoativo.getSigla() + " " + direcao + " " +
-                String.format("%.2f", Math.abs(criptoativo.getVariacao24h())) +
-                "% (limite: " + limiteVariacao + "%)";
+                String.format("%.2f", criptoativo.getVariacao24h().abs()) +
+                "% (limite: " + limiteVariacao.stripTrailingZeros().toPlainString() + "%)";
     }
 
     public void desativar() {
@@ -97,7 +105,7 @@ public class Alerta {
         System.out.println("=== Alerta ===");
         System.out.println("Usuario: " + usuario.getNome());
         System.out.println("Cripto: " + criptoativo.getSigla());
-        System.out.println("Limite: " + limiteVariacao + "%");
+        System.out.println("Limite: " + limiteVariacao.stripTrailingZeros().toPlainString() + "%");
         System.out.println("Ativado: " + ativado);
         System.out.println("Configurado em: " + dataConfiguracao);
         System.out.println("Status: " + mensagemAlerta());
