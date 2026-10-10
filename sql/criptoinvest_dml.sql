@@ -1,12 +1,16 @@
 -- ============================================================================
 -- CriptoInvest - VOLTZ Engenharia de Software
--- FASE 5 - SCRIPT DML (Data Manipulation Language)
+-- FASE 6 - SCRIPT DML (Data Manipulation Language)
 --
 -- Banco: Oracle 19c+ (Oracle FIAP)
 -- Conteudo: INSERT (populacao), UPDATE, DELETE e SELECT de todas as tabelas.
 --
 -- PRE-REQUISITO: executar antes o script criptoinvest_ddl.sql
--- Os dados espelham a demonstracao da classe Main.java.
+-- Dados de exemplo, compativeis com o DDL da Fase 6 (taxa e total_taxas com no
+-- maximo 2 casas, cabendo em NUMBER(15,2)). Sao independentes da Main: a classe
+-- com.criptoinvest.Main (Fase 6) e um teste de integracao que cria e apaga os
+-- proprios registros (chaves naturais com sufixo de timestamp), sem colidir com
+-- estes dados e sem depender deste script.
 -- ============================================================================
 
 

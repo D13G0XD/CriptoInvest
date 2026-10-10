@@ -1,10 +1,25 @@
 -- ============================================================================
 -- CriptoInvest - VOLTZ Engenharia de Software
--- FASE 5 - SCRIPT DDL (Data Definition Language)
+-- FASE 6 - SCRIPT DDL (Data Definition Language)
 --
 -- Banco: Oracle 19c+ (Oracle FIAP)
 -- Conteudo: DROP / CREATE / ALTER de todas as tabelas do modelo relacional,
 --           com todas as restricoes (PK, FK, UNIQUE, CHECK, NOT NULL).
+--
+-- Alteracoes da Fase 6 em relacao a Fase 5 (marcadas com "-- [Fase 6]"):
+--   1) carteira.descricao       VARCHAR2(100) -> VARCHAR2(200)
+--      (o Java monta "Carteira PF de " / "Carteira PJ - " + nome do titular,
+--       ate 15 + 150 caracteres)
+--   2) transacao.taxa           NUMBER(15,4)  -> NUMBER(15,2)
+--   3) relatorio.total_taxas    NUMBER(15,4)  -> NUMBER(15,2)
+--      (taxa e dinheiro: o Java a calcula e soma com 2 casas - Valores.dinheiro)
+--   4) uk_alerta_usuario_cripto UNIQUE (id_usuario, id_cripto) em alerta
+--      (um alerta por usuario e criptoativo)
+--   5) idx_posicao_cripto       indice de apoio a FK posicao.id_cripto
+--   6) COMMENTs das colunas alteradas e da tabela alerta
+--
+-- O script continua reexecutavel: o bloco da secao 1 remove o que existir e o
+-- restante recria tudo, entao basta roda-lo de novo para aplicar a Fase 6.
 --
 -- Estrategia de heranca em CARTEIRA (Joined):
 --   carteira (pai)  ->  carteira_pf | carteira_pj  (filhas)
@@ -88,7 +103,7 @@ CREATE SEQUENCE seq_posicao     START WITH 1 INCREMENT BY 1 NOCACHE;
 -- ----------------------------------------------------------------------------
 CREATE TABLE carteira (
     id_carteira     NUMBER(10)      NOT NULL,
-    descricao       VARCHAR2(100)   NOT NULL,
+    descricao       VARCHAR2(200)   NOT NULL,   -- [Fase 6] era VARCHAR2(100)
     saldo_reais     NUMBER(15,2)    DEFAULT 0 NOT NULL,
     tipo            CHAR(2)         NOT NULL,
     CONSTRAINT pk_carteira       PRIMARY KEY (id_carteira),
@@ -167,7 +182,7 @@ CREATE TABLE transacao (
     tipo           VARCHAR2(10) NOT NULL,
     quantidade     NUMBER(18,8) NOT NULL,
     preco_unitario NUMBER(18,8) NOT NULL,
-    taxa           NUMBER(15,4) NOT NULL,
+    taxa           NUMBER(15,2) NOT NULL,       -- [Fase 6] era NUMBER(15,4)
     data_operacao  DATE         NOT NULL,
     observacao     VARCHAR2(200),
     CONSTRAINT pk_transacao       PRIMARY KEY (id_transacao),
@@ -187,7 +202,7 @@ CREATE TABLE relatorio (
     valor_total_carteira     NUMBER(18,2),
     total_investido          NUMBER(18,2),
     total_vendido            NUMBER(18,2),
-    total_taxas              NUMBER(15,4),
+    total_taxas              NUMBER(15,2),    -- [Fase 6] era NUMBER(15,4)
     lucro_total              NUMBER(18,2),
     rentabilidade_percentual NUMBER(10,4),
     CONSTRAINT pk_relatorio PRIMARY KEY (id_relatorio)
@@ -237,6 +252,8 @@ ALTER TABLE empresa     ADD CONSTRAINT uk_empresa_cnpj     UNIQUE (cnpj);
 ALTER TABLE empresa     ADD CONSTRAINT uk_empresa_carteira UNIQUE (id_carteira_pj);
 ALTER TABLE criptoativo ADD CONSTRAINT uk_criptoativo_sigla UNIQUE (sigla);
 ALTER TABLE posicao     ADD CONSTRAINT uk_posicao_cart_cripto UNIQUE (id_carteira, id_cripto);
+-- [Fase 6] um alerta por par usuario x criptoativo
+ALTER TABLE alerta      ADD CONSTRAINT uk_alerta_usuario_cripto UNIQUE (id_usuario, id_cripto);
 
 -- --- Heranca Joined: PK das filhas tambem e FK para a tabela pai -------------
 ALTER TABLE carteira_pf ADD CONSTRAINT fk_carteira_pf_carteira
@@ -287,6 +304,9 @@ CREATE INDEX idx_transacao_cripto   ON transacao (id_cripto);
 CREATE INDEX idx_relatorio_carteira ON relatorio (id_carteira);
 CREATE INDEX idx_alerta_usuario     ON alerta    (id_usuario);
 CREATE INDEX idx_alerta_cripto      ON alerta    (id_cripto);
+-- [Fase 6] apoio a fk_posicao_cripto (o indice de uk_posicao_cart_cripto so
+-- cobre consultas que comecam por id_carteira)
+CREATE INDEX idx_posicao_cripto     ON posicao   (id_cripto);
 
 
 -- ============================================================================
@@ -294,6 +314,8 @@ CREATE INDEX idx_alerta_cripto      ON alerta    (id_cripto);
 -- ============================================================================
 COMMENT ON TABLE  carteira                   IS 'Tabela pai da heranca Joined: atributos comuns das carteiras PF e PJ';
 COMMENT ON COLUMN carteira.tipo              IS 'Discriminador da heranca: PF ou PJ';
+-- [Fase 6] descricao ampliada para 200
+COMMENT ON COLUMN carteira.descricao         IS 'Prefixo (Carteira PF de / Carteira PJ - ) + nome do titular: ate 200 caracteres';
 COMMENT ON TABLE  carteira_pf                IS 'Carteira de Pessoa Fisica - filha de carteira';
 COMMENT ON COLUMN carteira_pf.id_carteira_pf IS 'PK e FK -> carteira(id_carteira)';
 COMMENT ON TABLE  carteira_pj                IS 'Carteira de Pessoa Juridica - filha de carteira';
@@ -303,9 +325,14 @@ COMMENT ON TABLE  empresa                    IS 'Pessoa Juridica pertencente a u
 COMMENT ON TABLE  criptoativo                IS 'Criptomoeda monitorada pela plataforma';
 COMMENT ON TABLE  transacao                  IS 'Evento de compra ou venda de criptoativo em uma carteira';
 COMMENT ON COLUMN transacao.observacao       IS 'Texto livre da operacao (Transacao.observacao)';
+-- [Fase 6] taxa com 2 casas
+COMMENT ON COLUMN transacao.taxa             IS 'Taxa de corretagem em reais (0,1% do valor bruto), 2 casas como no Java';
 COMMENT ON TABLE  relatorio                  IS 'Snapshot de desempenho de uma carteira em determinada data';
+-- [Fase 6] total_taxas com 2 casas
+COMMENT ON COLUMN relatorio.total_taxas      IS 'Soma das taxas pagas em reais, 2 casas como transacao.taxa';
 COMMENT ON TABLE  posicao                    IS 'Associativa N:N Carteira x Criptoativo com o saldo agregado';
-COMMENT ON TABLE  alerta                     IS 'Associativa N:N Usuario x Criptoativo com o limite de variacao monitorado';
+-- [Fase 6] alerta passa a ter um unico registro por usuario e criptoativo
+COMMENT ON TABLE  alerta                     IS 'Associativa N:N Usuario x Criptoativo com o limite de variacao monitorado (um alerta por par)';
 
 
 -- ============================================================================
