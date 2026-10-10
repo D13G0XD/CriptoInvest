@@ -1,6 +1,7 @@
 package com.criptoinvest.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Snapshot de desempenho de uma carteira, fechado na data de geracao.
@@ -11,12 +12,16 @@ import java.math.BigDecimal;
  * ou trocar a carteira e manter os valores da anterior - e um snapshot que se
  * contradiz nao serve nem para conferencia nem para historico. Para numeros
  * atualizados, gere um novo Relatorio.
+ *
+ * Um relatorio lido do banco usa o construtor de reconstrucao, que recebe os
+ * numeros gravados em vez de recalcula-los: o snapshot vale pela data em que
+ * foi gerado, ainda que a carteira tenha mudado depois.
  */
 public class Relatorio {
 
-    private int idRelatorio;     // PK - atribuida pelo banco, entao tem setter
+    private int idRelatorio;     // PK - atribuida pelo banco (seq_relatorio), entao tem setter; 0 = nao persistido
     private final Carteira carteira;   // FK -> Carteira (idCarteira) - obrigatoria - relacionamento N:1
-    private final String dataGeracao;
+    private final LocalDate dataGeracao;   // relatorio.data_geracao DATE NOT NULL
     private final BigDecimal valorTotalCarteira;
     private final BigDecimal totalInvestido;
     private final BigDecimal totalVendido;
@@ -24,9 +29,21 @@ public class Relatorio {
     private final BigDecimal lucroTotal;
     private final BigDecimal rentabilidadePercentual;
 
-    public Relatorio(int id, Carteira carteira, String dataGeracao) {
+    /**
+     * Gera o snapshot lendo os numeros da carteira neste momento.
+     *
+     * A data e so LocalDate, sem a sobrecarga em texto de Transacao/Alerta:
+     * (int, Carteira, String) tornaria ambigua a chamada com null na data.
+     * Para um literal, use LocalDate.parse("yyyy-MM-dd") ou Datas.de.
+     *
+     * @throws IllegalArgumentException quando a carteira ou a data sao nulas
+     */
+    public Relatorio(int id, Carteira carteira, LocalDate dataGeracao) {
         if (carteira == null) {
             throw new IllegalArgumentException("Relatorio exige uma Carteira.");
+        }
+        if (dataGeracao == null) {
+            throw new IllegalArgumentException("Relatorio exige a data de geracao.");
         }
         this.idRelatorio = id;
         this.carteira = carteira;
@@ -37,6 +54,35 @@ public class Relatorio {
         this.totalTaxas = carteira.calcularTotalTaxas();
         this.lucroTotal = carteira.calcularLucroTotal();
         this.rentabilidadePercentual = carteira.calcularRentabilidade();
+    }
+
+    /**
+     * Reconstrucao de um relatorio ja gravado no banco (uso da camada de persistencia).
+     *
+     * Recebe os numeros gravados e NAO recalcula nada a partir da carteira; apenas
+     * normaliza as escalas (dinheiro com 2 casas, rentabilidade com 4). As colunas
+     * de totais aceitam NULL no banco, e null chega aqui como zero (Valores.ouZero).
+     *
+     * @throws IllegalArgumentException quando a carteira ou a data sao nulas
+     */
+    public Relatorio(int id, Carteira carteira, LocalDate dataGeracao, BigDecimal valorTotalCarteira,
+                     BigDecimal totalInvestido, BigDecimal totalVendido, BigDecimal totalTaxas,
+                     BigDecimal lucroTotal, BigDecimal rentabilidadePercentual) {
+        if (carteira == null) {
+            throw new IllegalArgumentException("Relatorio exige uma Carteira.");
+        }
+        if (dataGeracao == null) {
+            throw new IllegalArgumentException("Relatorio exige a data de geracao.");
+        }
+        this.idRelatorio = id;
+        this.carteira = carteira;
+        this.dataGeracao = dataGeracao;
+        this.valorTotalCarteira = Valores.dinheiro(valorTotalCarteira);
+        this.totalInvestido = Valores.dinheiro(totalInvestido);
+        this.totalVendido = Valores.dinheiro(totalVendido);
+        this.totalTaxas = Valores.dinheiro(totalTaxas);
+        this.lucroTotal = Valores.dinheiro(lucroTotal);
+        this.rentabilidadePercentual = Valores.percentual(rentabilidadePercentual);
     }
 
     public int getIdRelatorio() {
@@ -52,7 +98,7 @@ public class Relatorio {
         return carteira;
     }
 
-    public String getDataGeracao() {
+    public LocalDate getDataGeracao() {
         return dataGeracao;
     }
 

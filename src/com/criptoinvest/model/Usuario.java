@@ -10,7 +10,7 @@ import java.util.List;
  */
 public class Usuario {
 
-    private int id;                  // PK
+    private int idUsuario;           // PK - 0 enquanto nao persistido (seq_usuario)
     private String nome;
     private CarteiraPF carteira;     // FK 1:1 obrigatoria -> carteira_pf
     private String email;
@@ -22,7 +22,7 @@ public class Usuario {
 
     public Usuario(int id, String nome, String email, String senha, String cpf,
                    BigDecimal saldoInicial, BigDecimal limiteDiarioSaque) {
-        this.id = id;
+        this.idUsuario = id;
         this.nome = nome;
         this.carteira = new CarteiraPF("Carteira PF de " + nome, saldoInicial, limiteDiarioSaque);
         this.email = email;
@@ -42,7 +42,33 @@ public class Usuario {
         this(id, nome, email, senha, cpf, Valores.ZERO_DINHEIRO, Valores.de(5000));
     }
 
-    public int getId() { return id; }
+    /**
+     * Reconstrucao de um usuario ja gravado, com a carteira PF lida do banco.
+     * Uso da camada de persistencia: apenas atribui os valores, sem regra de
+     * negocio nem avisos. A lista de empresas comeca vazia (o DAO nao a carrega).
+     *
+     * @throws IllegalArgumentException quando a carteira e nula (1:1 obrigatorio)
+     */
+    public Usuario(int idUsuario, String nome, String email, String senha, String cpf,
+                   boolean autenticacaoDoisFatores, CarteiraPF carteira) {
+        if (carteira == null) {
+            throw new IllegalArgumentException("Usuario exige uma CarteiraPF.");
+        }
+        this.idUsuario = idUsuario;
+        this.nome = nome;
+        this.carteira = carteira;
+        this.email = email;
+        this.senha = senha;
+        this.cpf = cpf;
+        this.autenticacaoDoisFatores = autenticacaoDoisFatores;
+        this.empresas = new ArrayList<>();
+    }
+
+    public int getIdUsuario() { return idUsuario; }
+
+    /** A PK so e conhecida depois do INSERT (seq_usuario); 0 = nao persistido. */
+    public void setIdUsuario(int idUsuario) { this.idUsuario = idUsuario; }
+
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     public CarteiraPF getCarteira() { return carteira; }

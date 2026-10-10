@@ -12,29 +12,43 @@ import java.util.List;
  *
  * Posicao e fonte de verdade do saldo cripto. As Transacoes alimentam as Posicoes
  * automaticamente via registrarTransacao().
+ *
+ * Id: a tabela carteira e unica para PF e PJ, entao o id nao pode vir do titular
+ * (usuario 2 e empresa 2 gerariam a mesma PK). Ele vem da sequence seq_carteira,
+ * obtida pelo DAO no INSERT; ate la o id e 0, que significa "ainda nao persistida".
  */
 public abstract class Carteira {
 
-    /**
-     * Gerador dos ids das carteiras, espelhando a sequence seq_carteira do banco.
-     * A tabela carteira e unica para PF e PJ, entao o id nao pode vir do titular:
-     * usuario 2 e empresa 2 gerariam a mesma PK.
-     */
-    private static int sequencia = 0;
-
-    protected int idCarteira;          // PK
+    protected int idCarteira;          // PK - 0 enquanto nao persistida (seq_carteira)
     protected String descricao;
     protected BigDecimal saldoReais;
     protected List<Transacao> transacoes;
     protected List<Posicao> posicoes;
 
+    /** Carteira nova, ainda nao persistida: id 0 e historico vazio. */
     protected Carteira(String descricao, BigDecimal saldoInicial) {
-        this.idCarteira = ++sequencia;
+        this.idCarteira = 0;
         this.descricao = descricao;
         // ck_carteira_saldo CHECK (saldo_reais >= 0)
         this.saldoReais = Valores.negativo(saldoInicial)
                 ? Valores.ZERO_DINHEIRO
                 : Valores.dinheiro(saldoInicial);
+        this.transacoes = new ArrayList<>();
+        this.posicoes = new ArrayList<>();
+    }
+
+    /**
+     * Reconstrucao de uma carteira ja gravada no banco (uso da camada de persistencia).
+     *
+     * Apenas atribui os valores lidos, normalizando a escala do saldo: nao aplica
+     * regra de negocio nem imprime avisos, porque o banco ja garantiu as restricoes
+     * (ck_carteira_saldo). O historico comeca vazio e pode ser preenchido depois
+     * por carregarHistorico().
+     */
+    protected Carteira(int idCarteira, String descricao, BigDecimal saldoReais) {
+        this.idCarteira = idCarteira;
+        this.descricao = descricao;
+        this.saldoReais = Valores.dinheiro(saldoReais);
         this.transacoes = new ArrayList<>();
         this.posicoes = new ArrayList<>();
     }
@@ -47,12 +61,36 @@ public abstract class Carteira {
 
     public BigDecimal getSaldoReais() { return saldoReais; }
 
-    /** Somente leitura: o historico so muda por registrarTransacao(). */
+    /**
+     * Somente leitura: o historico muda por registrarTransacao() (regra de negocio)
+     * ou por carregarHistorico() (uso exclusivo da persistencia).
+     */
     public List<Transacao> getTransacoes() { return Collections.unmodifiableList(transacoes); }
     public int getTotalTransacoes() { return transacoes.size(); }
 
-    /** Somente leitura: as posicoes so mudam a partir das transacoes registradas. */
+    /**
+     * Somente leitura: as posicoes mudam a partir das transacoes registradas ou
+     * por carregarHistorico() (uso exclusivo da persistencia).
+     */
     public List<Posicao> getPosicoes() { return Collections.unmodifiableList(posicoes); }
+
+    /**
+     * Substitui o historico (transacoes e posicoes) pelo que foi lido do banco.
+     *
+     * USO EXCLUSIVO DA CAMADA DE PERSISTENCIA (CarteiraDAO.carregarHistorico).
+     * Diferente de registrarTransacao(), este metodo nao aplica nenhuma regra de
+     * negocio: nao mexe no saldo em reais, nao recalcula posicoes e nao valida as
+     * operacoes, porque o saldo_reais e as linhas de posicao gravadas ja refletem
+     * essas transacoes. As listas recebidas sao copiadas (alterar a lista original
+     * depois nao afeta a carteira); null equivale a lista vazia.
+     *
+     * @param transacoes transacoes gravadas desta carteira
+     * @param posicoes   posicoes gravadas desta carteira
+     */
+    public void carregarHistorico(List<Transacao> transacoes, List<Posicao> posicoes) {
+        this.transacoes = transacoes == null ? new ArrayList<>() : new ArrayList<>(transacoes);
+        this.posicoes = posicoes == null ? new ArrayList<>() : new ArrayList<>(posicoes);
+    }
 
     /** Discriminador da heranca (carteira.tipo IN ('PF','PJ')). */
     public abstract String getTipo();
@@ -104,6 +142,11 @@ public abstract class Carteira {
         sacar(Valores.de(valor));
     }
 
+    /**
+     * Busca pelo id de um criptoativo ja persistido (id > 0). Id 0 significa
+     * "ainda nao persistido" e nao identifica um criptoativo: a carteira localiza
+     * a posicao de uma transacao pelo proprio objeto (ver buscarPosicao(Criptoativo)).
+     */
     public Posicao buscarPosicao(int idCripto) {
         for (Posicao p : posicoes) {
             if (p.getCriptoativo().getIdCripto() == idCripto) return p;
@@ -111,9 +154,31 @@ public abstract class Carteira {
         return null;
     }
 
-    public Posicao buscarPosicao(String sigla) {
+    /**
+     * Posicao do criptoativo informado, usada ao aplicar uma transacao.
+     *
+     * Id 0 significa "criptoativo ainda nao persistido" (o id so vem da
+     * sequence no INSERT), entao dois criptoativos novos e diferentes teriam o
+     * mesmo id 0 e cairiam na mesma posicao se a comparacao fosse so pelo id.
+     * Por isso o criptoativo casa pelo proprio objeto e, apenas quando ja tem
+     * id persistido (> 0), tambem pelo id (outro objeto lido do banco para o
+     * mesmo registro).
+     */
+    private Posicao buscarPosicao(Criptoativo c) {
         for (Posicao p : posicoes) {
-            if (p.getCriptoativo().getSigla().equals(sigla)) return p;
+            Criptoativo daPosicao = p.getCriptoativo();
+            if (daPosicao == c || (c.getIdCripto() > 0 && daPosicao.getIdCripto() == c.getIdCripto())) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    /** Busca pela sigla, normalizada como em Criptoativo (sem espacos, em maiusculas). */
+    public Posicao buscarPosicao(String sigla) {
+        String procurada = Criptoativo.normalizarSigla(sigla);
+        for (Posicao p : posicoes) {
+            if (p.getCriptoativo().getSigla().equals(procurada)) return p;
         }
         return null;
     }
@@ -157,8 +222,21 @@ public abstract class Carteira {
         return true;
     }
 
+    /**
+     * Registra a transacao com uma observacao. A observacao que nao cabe em
+     * transacao.observacao VARCHAR2(200) recusa a operacao inteira antes de
+     * qualquer efeito em memoria (saldo, posicao e historico ficam intactos),
+     * em vez de a falha so aparecer na gravacao.
+     *
+     * @return true quando a transacao foi efetivada
+     */
     public boolean registrarTransacao(Transacao transacao, String observacao) {
         if (transacao != null) {
+            if (!Transacao.observacaoValida(observacao)) {
+                System.out.println("Erro: transacao recusada - observacao com mais de "
+                        + Transacao.TAMANHO_MAXIMO_OBSERVACAO + " bytes (transacao.observacao VARCHAR2(200)).");
+                return false;
+            }
             transacao.setObservacao(observacao);
         }
         return registrarTransacao(transacao);
@@ -172,7 +250,7 @@ public abstract class Carteira {
      */
     private boolean aplicarNaPosicao(Transacao t) {
         Criptoativo c = t.getCriptoativo();
-        Posicao p = buscarPosicao(c.getIdCripto());
+        Posicao p = buscarPosicao(c);
 
         if ("COMPRA".equals(t.getTipo())) {
             if (p == null) {
@@ -237,12 +315,20 @@ public abstract class Carteira {
                 calcularValorTotal().add(calcularTotalVendido()).subtract(calcularTotalInvestido()));
     }
 
+    /**
+     * Rentabilidade percentual (lucro / investido x 100), na escala 4 de
+     * relatorio.rentabilidade_percentual NUMBER(10,4). Uma compra a preco quase
+     * zero que depois se valoriza gera percentuais acima de 999999.9999, que o
+     * Oracle recusaria com ORA-01438 ao gravar o relatorio: nesse caso avisa e
+     * usa o teto da coluna, mantendo o sinal.
+     */
     public BigDecimal calcularRentabilidade() {
         BigDecimal investido = calcularTotalInvestido();
         if (Valores.zero(investido)) return Valores.percentual(BigDecimal.ZERO);
-        return Valores.percentual(calcularLucroTotal()
+        return Valores.percentualNoTeto(calcularLucroTotal()
                 .multiply(BigDecimal.valueOf(100))
-                .divide(investido, Valores.ESCALA_PERCENTUAL, Valores.ARREDONDAMENTO));
+                .divide(investido, Valores.ESCALA_PERCENTUAL, Valores.ARREDONDAMENTO),
+                "rentabilidade_percentual");
     }
 
     public void exibirResumo() {

@@ -8,12 +8,18 @@ import java.time.LocalDate;
  * Atributo proprio: limite diario de saque.
  * O limite e acumulado no dia: cada saque consome o limite restante;
  * resetar ocorre automaticamente quando muda o dia (LocalDate.now()).
+ *
+ * Limitacao: o controle de saques do dia (saquesHoje/dataUltimoSaque) fica so
+ * em memoria e nao e persistido (carteira_pf nao tem coluna para ele); uma
+ * carteira relida do banco (buscarPorId) recomeca com o acumulado zerado, entao
+ * o limite so vale dentro de um mesmo objeto. Persistir o acumulado (ex.:
+ * colunas saques_hoje e data_ultimo_saque em carteira_pf) fica como melhoria futura.
  */
 public class CarteiraPF extends Carteira {
 
     private BigDecimal limiteDiarioSaque;
-    private BigDecimal saquesHoje;
-    private String dataUltimoSaque;
+    private BigDecimal saquesHoje;        // controle em memoria: nao e persistido
+    private LocalDate dataUltimoSaque;    // controle em memoria: nao e persistido
 
     public CarteiraPF(String descricao, BigDecimal saldoInicial, BigDecimal limiteDiarioSaque) {
         super(descricao, saldoInicial);
@@ -32,6 +38,19 @@ public class CarteiraPF extends Carteira {
 
     public CarteiraPF(String descricao) {
         this(descricao, Valores.ZERO_DINHEIRO, Valores.de(5000));
+    }
+
+    /**
+     * Reconstrucao de uma carteira PF ja gravada (carteira + carteira_pf).
+     * Uso da camada de persistencia: apenas atribui os valores lidos, normalizando
+     * as escalas, sem regra de negocio nem avisos. O controle de saques do dia
+     * nao e persistido, entao recomeca zerado.
+     */
+    public CarteiraPF(int idCarteira, String descricao, BigDecimal saldoReais, BigDecimal limiteDiarioSaque) {
+        super(idCarteira, descricao, saldoReais);
+        this.limiteDiarioSaque = Valores.dinheiro(limiteDiarioSaque);
+        this.saquesHoje = Valores.ZERO_DINHEIRO;
+        this.dataUltimoSaque = null;
     }
 
     public BigDecimal getLimiteDiarioSaque() { return limiteDiarioSaque; }
@@ -80,7 +99,7 @@ public class CarteiraPF extends Carteira {
     }
 
     private void resetarSeNovoDia() {
-        String hoje = LocalDate.now().toString();
+        LocalDate hoje = LocalDate.now();
         if (!hoje.equals(dataUltimoSaque)) {
             saquesHoje = Valores.ZERO_DINHEIRO;
             dataUltimoSaque = hoje;

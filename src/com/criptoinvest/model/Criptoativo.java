@@ -1,6 +1,7 @@
 package com.criptoinvest.model;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 
 public class Criptoativo {
 
@@ -14,7 +15,7 @@ public class Criptoativo {
     public Criptoativo(int id, String nome, String sigla, BigDecimal precoAtual, String categoria) {
         this.idCripto = id;
         this.nome = nome;
-        this.sigla = sigla;
+        this.sigla = normalizarSigla(sigla);
         // ck_criptoativo_preco CHECK (preco_atual >= 0)
         if (Valores.negativo(precoAtual)) {
             System.out.println("Aviso: preco_atual negativo, ajustado para 0.");
@@ -52,7 +53,17 @@ public class Criptoativo {
     }
 
     public void setSigla(String sigla) {
-        this.sigla = sigla;
+        this.sigla = normalizarSigla(sigla);
+    }
+
+    /**
+     * Forma canonica da sigla: sem espacos nas pontas e em maiusculas.
+     * uk_criptoativo_sigla diferencia maiusculas de minusculas, entao sem esta
+     * normalizacao 'BTC' e 'btc' poderiam coexistir no banco. Locale.ROOT evita
+     * conversoes dependentes do idioma da maquina. null continua null.
+     */
+    public static String normalizarSigla(String sigla) {
+        return sigla == null ? null : sigla.trim().toUpperCase(Locale.ROOT);
     }
 
     public BigDecimal getPrecoAtual() {
@@ -73,7 +84,7 @@ public class Criptoativo {
     }
 
     public void setVariacao24h(BigDecimal variacao24h) {
-        this.variacao24h = Valores.percentual(variacao24h);
+        this.variacao24h = Valores.percentualNoTeto(variacao24h, "variacao_24h");
     }
 
     public void setVariacao24h(double variacao24h) {
@@ -90,10 +101,14 @@ public class Criptoativo {
         if (Valores.zero(this.precoAtual)) {
             this.variacao24h = Valores.percentual(BigDecimal.ZERO);
         } else {
+            // um preco que parte de quase zero gera percentuais enormes (de 0.01
+            // para 1000 a variacao e de 9999900%): percentualNoTeto usa o teto
+            // de variacao_24h NUMBER(10,4) em vez de deixar o Oracle recusar
             BigDecimal diferenca = Valores.ouZero(novoPreco).subtract(this.precoAtual);
-            this.variacao24h = Valores.percentual(
+            this.variacao24h = Valores.percentualNoTeto(
                     diferenca.multiply(BigDecimal.valueOf(100))
-                             .divide(this.precoAtual, Valores.ESCALA_PERCENTUAL, Valores.ARREDONDAMENTO));
+                             .divide(this.precoAtual, Valores.ESCALA_PERCENTUAL, Valores.ARREDONDAMENTO),
+                    "variacao_24h");
         }
         this.precoAtual = Valores.cripto(novoPreco);
     }
@@ -109,7 +124,7 @@ public class Criptoativo {
             return;
         }
         this.precoAtual = Valores.cripto(novoPreco);
-        this.variacao24h = Valores.percentual(variacao);
+        this.variacao24h = Valores.percentualNoTeto(variacao, "variacao_24h");
     }
 
     public void atualizarPreco(double novoPreco, double variacao) {

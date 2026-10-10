@@ -31,6 +31,17 @@ public class CarteiraPJ extends Carteira {
         this(descricao, Valores.ZERO_DINHEIRO, "SIMPLES");
     }
 
+    /**
+     * Reconstrucao de uma carteira PJ ja gravada (carteira + carteira_pj).
+     * Uso da camada de persistencia: apenas atribui os valores lidos, normalizando
+     * a escala do saldo, sem regra de negocio nem avisos - o regime ja foi validado
+     * pelo ck_carteira_pj_regime do banco.
+     */
+    public CarteiraPJ(int idCarteira, String descricao, BigDecimal saldoReais, String regimeTributario) {
+        super(idCarteira, descricao, saldoReais);
+        this.regimeTributario = regimeTributario;
+    }
+
     public String getRegimeTributario() { return regimeTributario; }
     public void setRegimeTributario(String regime) {
         if (regimeValido(regime)) {
