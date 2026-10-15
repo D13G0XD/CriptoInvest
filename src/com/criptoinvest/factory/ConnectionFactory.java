@@ -22,7 +22,7 @@ import java.util.Map;
  * Os dados de conexao sao resolvidos nesta ordem de precedencia:
  *
  *   1) Propriedades de sistema, que sempre vencem:
- *      java -Ddb.user=rmXXXXXX -Ddb.password=ddmmaa -cp ... com.criptoinvest.model.Main
+ *      java -Ddb.user=rmXXXXXX -Ddb.password=ddmmaa -cp ... com.criptoinvest.Main
  *
  *   2) Arquivo .env na raiz do projeto (NAO versionado - ver .gitignore):
  *      DB_URL = jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL

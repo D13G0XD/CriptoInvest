@@ -1,6 +1,7 @@
 package com.criptoinvest.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Entidade associativa que resolve o relacionamento N:N entre Usuario e Criptoativo.
@@ -10,39 +11,58 @@ import java.math.BigDecimal;
  * Cardinalidade: Usuario (1) ----- (N) Alerta (N) ----- (1) Criptoativo
  * Verbo do relacionamento: "Usuario MONITORA Criptoativo (com limite de variacao)"
  * Obrigatoriedade: Alerta exige Usuario e Criptoativo (ambas FKs obrigatorias).
+ * Unicidade: um alerta por par usuario x criptoativo (uk_alerta_usuario_cripto).
+ *
+ * Reconstrucao a partir do banco: construtor principal + setIdAlerta/setAtivado
+ * (o construtor sempre cria o alerta ativado).
  */
 public class Alerta {
 
-    private int idAlerta;             // PK
+    private int idAlerta;             // PK - 0 enquanto nao persistido (seq_alerta)
     private Usuario usuario;          // FK -> Usuario (idUsuario) - obrigatoria
     private Criptoativo criptoativo;  // FK -> Criptoativo (idCripto) - obrigatoria
 
     private BigDecimal limiteVariacao;
     private boolean ativado;
-    private String dataConfiguracao;
+    private LocalDate dataConfiguracao;   // alerta.data_configuracao DATE NOT NULL
 
     public Alerta(int id, Usuario usuario, Criptoativo criptoativo,
-                  BigDecimal limiteVariacao, String dataConfiguracao) {
+                  BigDecimal limiteVariacao, LocalDate dataConfiguracao) {
         if (usuario == null || criptoativo == null) {
             throw new IllegalArgumentException("Alerta exige usuario e criptoativo.");
+        }
+        if (dataConfiguracao == null) {
+            throw new IllegalArgumentException("Alerta exige a data de configuracao.");
         }
         this.idAlerta = id;
         this.usuario = usuario;
         this.criptoativo = criptoativo;
-        if (Valores.naoPositivo(limiteVariacao)) {
+        // arredonda antes de validar: um limite positivo menor que a ultima casa
+        // viraria zero no setScale e violaria o ck_alerta_limite (limite_variacao > 0)
+        BigDecimal limiteArredondado = Valores.percentual(limiteVariacao);
+        if (Valores.naoPositivo(limiteArredondado)) {
             System.out.println("Aviso: limiteVariacao deve ser positivo, ajustado para 5%.");
             this.limiteVariacao = Valores.percentual(Valores.de(5));
+        } else if (Valores.maior(limiteArredondado, Valores.TETO_PERCENTUAL)) {
+            // limite_variacao NUMBER(10,4): acima do teto o Oracle recusaria com ORA-01438
+            System.out.println("Aviso: limiteVariacao nao cabe em NUMBER(10,4), ajustado para "
+                    + Valores.TETO_PERCENTUAL.toPlainString() + "%.");
+            this.limiteVariacao = Valores.TETO_PERCENTUAL;
         } else {
-            this.limiteVariacao = Valores.percentual(limiteVariacao);
+            this.limiteVariacao = limiteArredondado;
         }
         this.dataConfiguracao = dataConfiguracao;
         this.ativado = true;
     }
 
-    /** Sobrecarga de conveniencia para os literais da demonstracao. */
+    /**
+     * Sobrecarga de conveniencia para os literais da demonstracao: limite em
+     * double e data no texto "yyyy-MM-dd" (ver Datas.de). A data em texto
+     * acompanha so a sobrecarga double, para que nenhuma chamada fique ambigua.
+     */
     public Alerta(int id, Usuario usuario, Criptoativo criptoativo,
                   double limiteVariacao, String dataConfiguracao) {
-        this(id, usuario, criptoativo, Valores.de(limiteVariacao), dataConfiguracao);
+        this(id, usuario, criptoativo, Valores.de(limiteVariacao), Datas.de(dataConfiguracao));
     }
 
     public int getIdAlerta() { return idAlerta; }
@@ -59,19 +79,34 @@ public class Alerta {
 
     public BigDecimal getLimiteVariacao() { return limiteVariacao; }
     public void setLimiteVariacao(BigDecimal limiteVariacao) {
-        if (Valores.naoPositivo(limiteVariacao)) {
+        // arredonda antes de validar (ck_alerta_limite: limite_variacao > 0)
+        BigDecimal limiteArredondado = Valores.percentual(limiteVariacao);
+        if (Valores.naoPositivo(limiteArredondado)) {
             System.out.println("Erro: limiteVariacao deve ser positivo.");
             return;
         }
-        this.limiteVariacao = Valores.percentual(limiteVariacao);
+        // limite_variacao NUMBER(10,4): acima do teto o Oracle recusaria com ORA-01438
+        if (Valores.maior(limiteArredondado, Valores.TETO_PERCENTUAL)) {
+            System.out.println("Erro: limiteVariacao nao cabe em NUMBER(10,4) (maximo "
+                    + Valores.TETO_PERCENTUAL.toPlainString() + "%).");
+            return;
+        }
+        this.limiteVariacao = limiteArredondado;
     }
 
     public void setLimiteVariacao(double limiteVariacao) {
         setLimiteVariacao(Valores.de(limiteVariacao));
     }
 
-    public String getDataConfiguracao() { return dataConfiguracao; }
-    public void setDataConfiguracao(String dataConfiguracao) { this.dataConfiguracao = dataConfiguracao; }
+    public LocalDate getDataConfiguracao() { return dataConfiguracao; }
+    public void setDataConfiguracao(LocalDate dataConfiguracao) {
+        // alerta.data_configuracao e NOT NULL
+        if (dataConfiguracao == null) {
+            System.out.println("Erro: data de configuracao nao pode ser nula.");
+            return;
+        }
+        this.dataConfiguracao = dataConfiguracao;
+    }
 
     public boolean verificarDisparo() {
         if (!ativado) return false;
