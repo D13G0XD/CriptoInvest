@@ -1,10 +1,14 @@
 -- ============================================================================
 -- CriptoInvest - VOLTZ Engenharia de Software
--- FASE 6 - SCRIPT DDL (Data Definition Language)
+-- FASE 7 - SCRIPT DDL (Data Definition Language)
 --
 -- Banco: Oracle 19c+ (Oracle FIAP)
 -- Conteudo: DROP / CREATE / ALTER de todas as tabelas do modelo relacional,
 --           com todas as restricoes (PK, FK, UNIQUE, CHECK, NOT NULL).
+--
+-- Fase 7: nenhuma alteracao estrutural. O programa de menus usa as mesmas 10
+-- tabelas e 8 sequences da Fase 6 - basta este script (e, opcionalmente, o
+-- criptoinvest_dml.sql com dados de exemplo).
 --
 -- Alteracoes da Fase 6 em relacao a Fase 5 (marcadas com "-- [Fase 6]"):
 --   1) carteira.descricao       VARCHAR2(100) -> VARCHAR2(200)

@@ -1,16 +1,20 @@
 -- ============================================================================
 -- CriptoInvest - VOLTZ Engenharia de Software
--- FASE 6 - SCRIPT DML (Data Manipulation Language)
+-- FASE 7 - SCRIPT DML (Data Manipulation Language)
 --
 -- Banco: Oracle 19c+ (Oracle FIAP)
 -- Conteudo: INSERT (populacao), UPDATE, DELETE e SELECT de todas as tabelas.
 --
 -- PRE-REQUISITO: executar antes o script criptoinvest_ddl.sql
 -- Dados de exemplo, compativeis com o DDL da Fase 6 (taxa e total_taxas com no
--- maximo 2 casas, cabendo em NUMBER(15,2)). Sao independentes da Main: a classe
--- com.criptoinvest.Main (Fase 6) e um teste de integracao que cria e apaga os
--- proprios registros (chaves naturais com sufixo de timestamp), sem colidir com
--- estes dados e sem depender deste script.
+-- maximo 2 casas, cabendo em NUMBER(15,2)). O programa de menus
+-- (com.criptoinvest.Main, Fase 7) funciona com ou sem estes dados: com eles,
+-- os menus ja abrem com usuarios, empresas, carteiras e transacoes para consulta.
+--
+-- [Fase 7] CPF e CNPJs de exemplo com digitos verificadores validos, porque o
+-- programa valida os documentos: 123.456.789-00 -> 123.456.789-09,
+-- 00.000.000/0001-00 -> 00.000.000/0001-91 e 11.111.111/0001-11 -> 11.111.111/0001-91
+-- (987.654.321-00 ja era valido).
 -- ============================================================================
 
 
@@ -39,7 +43,7 @@ VALUES (seq_carteira.CURRVAL, 5000);
 
 INSERT INTO usuario (id_usuario, id_carteira_pf, nome, email, senha, cpf, autenticacao_2fa)
 VALUES (seq_usuario.NEXTVAL, seq_carteira.CURRVAL,
-        'Lucas Alves', 'lucas@email.com', 'senha123', '123.456.789-00', 'S');
+        'Lucas Alves', 'lucas@email.com', 'senha123', '123.456.789-09', 'S');
 
 -- ----------------------------------------------------------------------------
 -- 1.2 ANA: carteira PF (pai + filha) e a usuaria titular
@@ -66,9 +70,9 @@ VALUES (seq_carteira.CURRVAL, 'LUCRO_PRESUMIDO');
 
 INSERT INTO empresa (id_empresa, id_usuario, id_carteira_pj, nome, cnpj)
 VALUES (seq_empresa.NEXTVAL,
-        (SELECT id_usuario FROM usuario WHERE cpf = '123.456.789-00'),
+        (SELECT id_usuario FROM usuario WHERE cpf = '123.456.789-09'),
         seq_carteira.CURRVAL,
-        'ABCD Investimentos', '00.000.000/0001-00');
+        'ABCD Investimentos', '00.000.000/0001-91');
 
 INSERT INTO carteira (id_carteira, descricao, saldo_reais, tipo)
 VALUES (seq_carteira.NEXTVAL, 'Carteira PJ - VOLTZ Holding', 92722.75, 'PJ');
@@ -78,9 +82,9 @@ VALUES (seq_carteira.CURRVAL, 'LUCRO_REAL');
 
 INSERT INTO empresa (id_empresa, id_usuario, id_carteira_pj, nome, cnpj)
 VALUES (seq_empresa.NEXTVAL,
-        (SELECT id_usuario FROM usuario WHERE cpf = '123.456.789-00'),
+        (SELECT id_usuario FROM usuario WHERE cpf = '123.456.789-09'),
         seq_carteira.CURRVAL,
-        'VOLTZ Holding', '11.111.111/0001-11');
+        'VOLTZ Holding', '11.111.111/0001-91');
 
 -- ----------------------------------------------------------------------------
 -- 1.4 CRIPTOATIVO
@@ -106,19 +110,19 @@ VALUES (seq_criptoativo.NEXTVAL, 'Cardano', 'ADA', 4.10, -1.80, 'Plataforma');
 -- ----------------------------------------------------------------------------
 INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao, observacao)
 VALUES (seq_transacao.NEXTVAL,
-        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-00'),
+        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-09'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'BTC'),
         'COMPRA', 0.5, 350000, 175, DATE '2026-05-07', NULL);
 
 INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao, observacao)
 VALUES (seq_transacao.NEXTVAL,
-        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-00'),
+        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-09'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'ETH'),
         'COMPRA', 2, 16000, 32, DATE '2026-05-07', 'Aporte em ETH');
 
 INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao, observacao)
 VALUES (seq_transacao.NEXTVAL,
-        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-00'),
+        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-09'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'BTC'),
         'VENDA', 0.1, 350000, 35, DATE '2026-05-08', 'Realizacao parcial de lucro');
 
@@ -130,13 +134,13 @@ VALUES (seq_transacao.NEXTVAL,
 
 INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao, observacao)
 VALUES (seq_transacao.NEXTVAL,
-        (SELECT id_carteira_pj FROM empresa     WHERE cnpj  = '00.000.000/0001-00'),
+        (SELECT id_carteira_pj FROM empresa     WHERE cnpj  = '00.000.000/0001-91'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'BTC'),
         'COMPRA', 0.2, 350000, 70, DATE '2026-05-09', 'Compra institucional ABCD');
 
 INSERT INTO transacao (id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, taxa, data_operacao, observacao)
 VALUES (seq_transacao.NEXTVAL,
-        (SELECT id_carteira_pj FROM empresa     WHERE cnpj  = '11.111.111/0001-11'),
+        (SELECT id_carteira_pj FROM empresa     WHERE cnpj  = '11.111.111/0001-91'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'USDT'),
         'COMPRA', 5000, 5.45, 27.25, DATE '2026-05-09', 'Caixa em stablecoin');
 
@@ -145,13 +149,13 @@ VALUES (seq_transacao.NEXTVAL,
 -- ----------------------------------------------------------------------------
 INSERT INTO posicao (id_posicao, id_carteira, id_cripto, quantidade_atual, preco_medio_compra, data_primeira_aquisicao, data_ultima_atualizacao)
 VALUES (seq_posicao.NEXTVAL,
-        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-00'),
+        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-09'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'BTC'),
         0.4, 350000, DATE '2026-05-07', DATE '2026-05-08');
 
 INSERT INTO posicao (id_posicao, id_carteira, id_cripto, quantidade_atual, preco_medio_compra, data_primeira_aquisicao, data_ultima_atualizacao)
 VALUES (seq_posicao.NEXTVAL,
-        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-00'),
+        (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-09'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'ETH'),
         2, 16000, DATE '2026-05-07', DATE '2026-05-07');
 
@@ -163,13 +167,13 @@ VALUES (seq_posicao.NEXTVAL,
 
 INSERT INTO posicao (id_posicao, id_carteira, id_cripto, quantidade_atual, preco_medio_compra, data_primeira_aquisicao, data_ultima_atualizacao)
 VALUES (seq_posicao.NEXTVAL,
-        (SELECT id_carteira_pj FROM empresa     WHERE cnpj  = '00.000.000/0001-00'),
+        (SELECT id_carteira_pj FROM empresa     WHERE cnpj  = '00.000.000/0001-91'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'BTC'),
         0.2, 350000, DATE '2026-05-09', DATE '2026-05-09');
 
 INSERT INTO posicao (id_posicao, id_carteira, id_cripto, quantidade_atual, preco_medio_compra, data_primeira_aquisicao, data_ultima_atualizacao)
 VALUES (seq_posicao.NEXTVAL,
-        (SELECT id_carteira_pj FROM empresa     WHERE cnpj  = '11.111.111/0001-11'),
+        (SELECT id_carteira_pj FROM empresa     WHERE cnpj  = '11.111.111/0001-91'),
         (SELECT id_cripto      FROM criptoativo WHERE sigla = 'USDT'),
         5000, 5.45, DATE '2026-05-09', DATE '2026-05-09');
 
@@ -178,12 +182,12 @@ VALUES (seq_posicao.NEXTVAL,
 -- ----------------------------------------------------------------------------
 INSERT INTO relatorio (id_relatorio, id_carteira, data_geracao, valor_total_carteira, total_investido, total_vendido, total_taxas, lucro_total, rentabilidade_percentual)
 VALUES (seq_relatorio.NEXTVAL,
-        (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-00'),
+        (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-09'),
         DATE '2026-05-10', 172000, 207207, 34965, 242, -242, -0.12);
 
 INSERT INTO relatorio (id_relatorio, id_carteira, data_geracao, valor_total_carteira, total_investido, total_vendido, total_taxas, lucro_total, rentabilidade_percentual)
 VALUES (seq_relatorio.NEXTVAL,
-        (SELECT id_carteira_pj FROM empresa WHERE cnpj = '00.000.000/0001-00'),
+        (SELECT id_carteira_pj FROM empresa WHERE cnpj = '00.000.000/0001-91'),
         DATE '2026-05-10', 70000, 70070, 0, 70, -70, -0.10);
 
 -- ----------------------------------------------------------------------------
@@ -191,13 +195,13 @@ VALUES (seq_relatorio.NEXTVAL,
 -- ----------------------------------------------------------------------------
 INSERT INTO alerta (id_alerta, id_usuario, id_cripto, limite_variacao, ativado, data_configuracao)
 VALUES (seq_alerta.NEXTVAL,
-        (SELECT id_usuario FROM usuario     WHERE cpf   = '123.456.789-00'),
+        (SELECT id_usuario FROM usuario     WHERE cpf   = '123.456.789-09'),
         (SELECT id_cripto  FROM criptoativo WHERE sigla = 'BTC'),
         5.0, 'S', DATE '2026-05-07');
 
 INSERT INTO alerta (id_alerta, id_usuario, id_cripto, limite_variacao, ativado, data_configuracao)
 VALUES (seq_alerta.NEXTVAL,
-        (SELECT id_usuario FROM usuario     WHERE cpf   = '123.456.789-00'),
+        (SELECT id_usuario FROM usuario     WHERE cpf   = '123.456.789-09'),
         (SELECT id_cripto  FROM criptoativo WHERE sigla = 'ETH'),
         8.0, 'S', DATE '2026-05-07');
 
@@ -228,23 +232,23 @@ UPDATE usuario
 -- 2.3 Aumento do limite diario de saque da carteira PF do Lucas
 UPDATE carteira_pf
    SET limite_diario_saque = 8000
- WHERE id_carteira_pf = (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-00');
+ WHERE id_carteira_pf = (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-09');
 
 -- 2.4 Mudanca de regime tributario da ABCD Investimentos
 UPDATE carteira_pj
    SET regime_tributario = 'LUCRO_REAL'
- WHERE id_carteira_pj = (SELECT id_carteira_pj FROM empresa WHERE cnpj = '00.000.000/0001-00');
+ WHERE id_carteira_pj = (SELECT id_carteira_pj FROM empresa WHERE cnpj = '00.000.000/0001-91');
 
 -- 2.5 Deposito de R$ 10.000 na carteira PF do Lucas
 UPDATE carteira
    SET saldo_reais = saldo_reais + 10000
- WHERE id_carteira = (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-00');
+ WHERE id_carteira = (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-09');
 
 -- 2.6 Reavaliacao da posicao de BTC na carteira PF do Lucas
 UPDATE posicao
    SET quantidade_atual        = 0.35,
        data_ultima_atualizacao = DATE '2026-05-11'
- WHERE id_carteira = (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-00')
+ WHERE id_carteira = (SELECT id_carteira_pf FROM usuario     WHERE cpf   = '123.456.789-09')
    AND id_cripto   = (SELECT id_cripto      FROM criptoativo WHERE sigla = 'BTC');
 
 -- 2.7 Ana vendeu toda a sua posicao em SOL: quantidade zerada
@@ -257,7 +261,7 @@ UPDATE posicao
 -- 2.8 Alerta de ETH passa a monitorar variacao de 6%
 UPDATE alerta
    SET limite_variacao = 6.0
- WHERE id_usuario = (SELECT id_usuario FROM usuario     WHERE cpf   = '123.456.789-00')
+ WHERE id_usuario = (SELECT id_usuario FROM usuario     WHERE cpf   = '123.456.789-09')
    AND id_cripto  = (SELECT id_cripto  FROM criptoativo WHERE sigla = 'ETH');
 
 COMMIT;
@@ -278,7 +282,7 @@ DELETE FROM alerta
 --     consulta 4.10 ainda mostra total_vendido = 34965, que era o valor correto
 --     na data do relatorio.
 DELETE FROM transacao
- WHERE id_carteira = (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-00')
+ WHERE id_carteira = (SELECT id_carteira_pf FROM usuario WHERE cpf = '123.456.789-09')
    AND tipo        = 'VENDA';
 
 -- 3.3 Remove as posicoes zeradas (nenhuma quantidade em custodia)
