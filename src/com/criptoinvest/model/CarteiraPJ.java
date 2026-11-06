@@ -1,6 +1,7 @@
 package com.criptoinvest.model;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Carteira de Pessoa Juridica - filha de Carteira (heranca joined).
@@ -8,7 +9,8 @@ import java.math.BigDecimal;
  */
 public class CarteiraPJ extends Carteira {
 
-    private static final String[] REGIMES_VALIDOS = { "SIMPLES", "LUCRO_PRESUMIDO", "LUCRO_REAL" };
+    /** Valores aceitos por ck_carteira_pj_regime (lista imutavel, usada tambem nos menus). */
+    public static final List<String> REGIMES_VALIDOS = List.of("SIMPLES", "LUCRO_PRESUMIDO", "LUCRO_REAL");
 
     private String regimeTributario;
 
@@ -52,11 +54,7 @@ public class CarteiraPJ extends Carteira {
     }
 
     private static boolean regimeValido(String regime) {
-        if (regime == null) return false;
-        for (String r : REGIMES_VALIDOS) {
-            if (r.equals(regime)) return true;
-        }
-        return false;
+        return regime != null && REGIMES_VALIDOS.contains(regime);
     }
 
     @Override

@@ -6,6 +6,9 @@ package com.criptoinvest.model;
  */
 public class Empresa {
 
+    /** Descricao da carteira PJ criada no cadastro: prefixo + razao social. */
+    public static final String PREFIXO_CARTEIRA = "Carteira PJ - ";
+
     private int idEmpresa;           // PK - 0 enquanto nao persistida (seq_empresa)
     private String nome;             // razao social
     private String cnpj;
@@ -24,7 +27,7 @@ public class Empresa {
         this.nome = razaoSocial;
         this.cnpj = cnpj;
         this.dono = dono;
-        this.carteira = new CarteiraPJ("Carteira PJ - " + razaoSocial, Valores.ZERO_DINHEIRO, regimeTributario);
+        this.carteira = new CarteiraPJ(PREFIXO_CARTEIRA + razaoSocial, Valores.ZERO_DINHEIRO, regimeTributario);
     }
 
     /**

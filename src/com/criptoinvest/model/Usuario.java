@@ -10,6 +10,9 @@ import java.util.List;
  */
 public class Usuario {
 
+    /** Descricao da carteira PF criada no cadastro: prefixo + nome do titular. */
+    public static final String PREFIXO_CARTEIRA = "Carteira PF de ";
+
     private int idUsuario;           // PK - 0 enquanto nao persistido (seq_usuario)
     private String nome;
     private CarteiraPF carteira;     // FK 1:1 obrigatoria -> carteira_pf
@@ -24,7 +27,7 @@ public class Usuario {
                    BigDecimal saldoInicial, BigDecimal limiteDiarioSaque) {
         this.idUsuario = id;
         this.nome = nome;
-        this.carteira = new CarteiraPF("Carteira PF de " + nome, saldoInicial, limiteDiarioSaque);
+        this.carteira = new CarteiraPF(PREFIXO_CARTEIRA + nome, saldoInicial, limiteDiarioSaque);
         this.email = email;
         this.senha = senha;
         this.cpf = cpf;
