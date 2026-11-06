@@ -32,33 +32,36 @@ O mercado de criptoativos ultrapassou a marca de 2,5 trilhões de dólares em ca
 - **Alertas** configuráveis para variações de preço dos criptoativos monitorados.
 
 > As funcionalidades acima descrevem o **escopo do produto** definido na Fase 1. O que está
-> implementado até a Fase 6 é o modelo de domínio em Java, o modelo relacional Oracle e a
-> integração JDBC completa — um DAO para cada uma das 10 tabelas do DDL, com uma `Main` que
-> testa INSERT, SELECT, UPDATE e DELETE de todas elas. Não há interface gráfica, cotações em
-> tempo real nem a camada de segurança (2FA e criptografia são requisitos de produto, ainda não
-> implementados). A `Main` das Fases 1 a 4 (demonstração do domínio e persistência em arquivos
-> texto) foi substituída pelo teste de integração e continua no histórico do git (commit `bb7e437`).
+> implementado até a Fase 7 é o modelo de domínio em Java, o modelo relacional Oracle, a
+> integração JDBC completa (um DAO para cada uma das 10 tabelas do DDL) e o **programa console
+> com menus** que usa tudo isso: cadastro, alteração, exclusão e consulta de cada módulo, compra
+> e venda, depósitos e saques, alertas e relatórios, sempre gravando e lendo do Oracle. Não há
+> interface gráfica, cotações em tempo real nem a camada de segurança (2FA e criptografia são
+> requisitos de produto, ainda não implementados). As `Main` anteriores continuam no histórico do
+> git: a demonstração das Fases 1 a 4 no commit `bb7e437` e o teste de integração JDBC da Fase 6
+> no commit `a608f1c`.
 
 ## Como Executar
 
 O projeto é Java puro. Compile e execute direto com `javac`/`java`; o Maven (`pom.xml`) é
 opcional e serve apenas para baixar o driver JDBC do Oracle (`ojdbc8`).
 
-A classe principal é `com.criptoinvest.Main` (arquivo `src/com/criptoinvest/Main.java`, no
-pacote raiz — saiu do pacote `model` na Fase 6). Ela é o **teste de integração JDBC** das 10
-tabelas: precisa do driver no classpath, das credenciais do banco e do DDL já aplicado no schema.
+A classe principal é `com.criptoinvest.Main` (arquivo `src/com/criptoinvest/Main.java`). Ela é
+o **programa console da Fase 7**: confere a conexão e abre o menu principal (ver
+[Fase 7](#fase-7--programa-console-com-menus)). Precisa do driver no classpath, das credenciais
+do banco e do DDL já aplicado no schema.
 
 **Compilar:**
 ```
 javac -sourcepath src -d out src/com/criptoinvest/Main.java
 ```
-O `-sourcepath` faz o compilador puxar sozinho as classes dos três pacotes (`model`, `dao`
-e `factory`), sem precisar listar cada um. A compilação não depende do driver (os DAOs usam só
-`java.sql`).
+O `-sourcepath` faz o compilador puxar sozinho as classes dos quatro pacotes (`model`, `dao`,
+`factory` e `view`), sem precisar listar cada um. A compilação não depende do driver (os DAOs
+usam só `java.sql`).
 
-Sem o driver no classpath (ou sem acesso ao banco), a `Main` testa a conexão, informa que não há
-conexão, mostra como configurar as credenciais e termina sem executar os testes. Com conexão, mas
-sem o DDL aplicado, a contagem inicial das tabelas falha (`ORA-00942`) e a `Main` pede para rodar
+Sem o driver no classpath (ou sem acesso ao banco), a `Main` informa que não há conexão, mostra
+como configurar as credenciais e oferece **tentar novamente** ou **sair**. Com conexão, mas sem o
+DDL aplicado, a consulta inicial falha (`ORA-00942`) e a `Main` pede para rodar
 `sql/criptoinvest_ddl.sql`.
 
 ### Compilar e executar com o banco
@@ -122,20 +125,36 @@ Execute os scripts como script (no SQL Developer, "Executar Script" — F5), nes
    existem) e duplica transações e relatórios, podendo deixar carteiras sem titular. Para
    repovoar, rode os dois scripts de novo, nessa ordem.
 
-A `Main` funciona com ou sem o DML: os dados de teste usam chaves naturais com sufixo de
-timestamp (não colidem com o DML nem com execuções anteriores), são apagados no fim e a contagem
-final de cada tabela é conferida contra a inicial. Por isso ela pode rodar antes ou depois do DML
-e quantas vezes for preciso.
+O programa funciona com ou sem o DML: sem ele, os menus começam vazios e tudo pode ser
+cadastrado por eles; com ele, já abrem com usuários, empresas, carteiras, transações, posições,
+alertas e relatórios de exemplo. Na Fase 7 o DML ganhou CPF e CNPJs com dígitos verificadores
+válidos (`123.456.789-09`, `00.000.000/0001-91` e `11.111.111/0001-91`), porque o programa
+valida os documentos.
 
 ## Estrutura de Classes
 
-O código está dividido em quatro partes: o ponto de entrada em `com.criptoinvest`, o domínio em
-`com.criptoinvest.model`, o acesso a dados em `com.criptoinvest.dao` e a conexão em
-`com.criptoinvest.factory`.
+O código está dividido em cinco partes: o ponto de entrada em `com.criptoinvest`, as telas do
+console em `com.criptoinvest.view`, o domínio em `com.criptoinvest.model`, o acesso a dados em
+`com.criptoinvest.dao` e a conexão em `com.criptoinvest.factory`. Cada classe fica no seu
+próprio arquivo (não há classes internas nem anônimas).
 
 ```
 src/com/criptoinvest/
-├── Main.java                   → Ponto de entrada: teste de integração JDBC das 10 tabelas (Fase 6)
+├── Main.java                   → Ponto de entrada: confere a conexão e abre o menu principal (Fase 7)
+├── view/
+│   ├── MenuBase.java           → Submenu abstrato: opções 1-5 (CRUD) + extras, tratamento de erros, seleção por ID
+│   ├── MenuUsuario.java        → Usuários (PF) + carteira PF; busca por CPF/e-mail, empresas do usuário
+│   ├── MenuEmpresa.java        → Empresas (PJ) + carteira PJ; busca por CNPJ, empresas por dono
+│   ├── MenuCarteira.java       → Carteiras (avulsas), depósito, saque, resumo com posições e rentabilidade
+│   ├── MenuCriptoativo.java    → Criptoativos; busca por sigla, atualização de cotação com alertas
+│   ├── MenuTransacao.java      → Compra e venda (registrar), alteração de data/observação, estorno, extrato
+│   ├── MenuPosicao.java        → Custódia já existente e ajuste manual de posições
+│   ├── MenuAlerta.java         → Alertas de variação; ativos, por usuário, disparados
+│   ├── MenuRelatorio.java      → Geração, atualização e consulta de relatórios (snapshots)
+│   ├── Entrada.java            → Leitura do teclado com validação (tamanhos, números, datas, CPF, CNPJ...)
+│   ├── Tela.java               → Saída: títulos, mensagens e formatação brasileira (R$ 1.234,56)
+│   ├── ErrosBanco.java         → Tradução das SQLException (ORA-xxxxx) em mensagens para o usuário
+│   └── OperacaoCancelada.java  → Exceção do CANCELAR digitado em qualquer campo
 ├── factory/
 │   └── ConnectionFactory.java  → Conexão com o Oracle da FIAP (URL, usuário, senha, timeout)
 ├── dao/
@@ -147,7 +166,7 @@ src/com/criptoinvest/
 │   ├── CarteiraPJDAO.java      → carteira_pj + linha pai em carteira
 │   ├── UsuarioDAO.java         → usuario + a sua carteira PF (mesma transação)
 │   ├── EmpresaDAO.java         → empresa + a sua carteira PJ (mesma transação)
-│   ├── TransacaoDAO.java       → transacao: registrar (transação + posição + saldo, atômico) e CRUD
+│   ├── TransacaoDAO.java       → transacao: registrar e estornar (transação + posição + saldo, atômicos) e CRUD
 │   ├── PosicaoDAO.java         → posicao (associativa carteira × criptoativo)
 │   ├── RelatorioDAO.java       → relatorio (snapshot gravado, lido sem recalcular)
 │   └── AlertaDAO.java          → alerta (associativa usuario × criptoativo)
@@ -163,7 +182,8 @@ src/com/criptoinvest/
     ├── Alerta.java         → Associativa Usuario ↔ Criptoativo (limite de variação)
     ├── Relatorio.java      → Snapshot imutável de desempenho de uma carteira numa data
     ├── Valores.java        → Escalas, precisão e arredondamentos dos valores (BigDecimal)
-    └── Datas.java          → Conversão das datas em texto "yyyy-MM-dd" para LocalDate
+    ├── Datas.java          → Conversão das datas em texto "yyyy-MM-dd" para LocalDate
+    └── Validacoes.java     → CPF, CNPJ (numérico e alfanumérico), e-mail, nome e tamanho em bytes
 ```
 
 ### Scripts SQL
@@ -188,7 +208,7 @@ Sobre reexecução (detalhes em [Ordem dos scripts SQL](#ordem-dos-scripts-sql-o
 - o DML não escreve nenhum id na mão. A PK sai da sequence e as FKs são resolvidas por
   `CURRVAL` (quando a linha pai acabou de ser inserida) ou por subconsulta na chave natural —
   `cpf`, `cnpj` e `sigla`, todas `UNIQUE`. Assim ele não depende de as sequences estarem
-  zeradas (a `Main` consome as sequences ao testar). Mas ele **não** é reexecutável sozinho:
+  zeradas (cada cadastro feito pelo programa consome as sequences). Mas ele **não** é reexecutável sozinho:
   deve rodar uma vez, logo depois do DDL.
 
 ### Diagrama de Relacionamentos
@@ -257,8 +277,9 @@ Uma transação recusada não altera nada e não entra no histórico, então os 
 | Conceito | Implementação |
 |---|---|
 | **Encapsulamento** | Todos os campos são `private`/`protected`, acessados via getters/setters |
-| **Herança** | `CarteiraPF` e `CarteiraPJ` estendem `Carteira` (joined inheritance); todos os DAOs estendem `BaseDAO` |
-| **Polimorfismo dinâmico** | `getTipo()` abstrato em `Carteira`, sobrescrito nas filhas; `sacar()` sobrescrito em `CarteiraPF` para aplicar limite diário; `CarteiraDAO` devolve cada linha como `CarteiraPF` ou `CarteiraPJ` |
+| **Herança** | `CarteiraPF` e `CarteiraPJ` estendem `Carteira` (joined inheritance); todos os DAOs estendem `BaseDAO`; os 8 submenus estendem `MenuBase` |
+| **Polimorfismo dinâmico** | `getTipo()` abstrato em `Carteira`, sobrescrito nas filhas; `sacar()` sobrescrito em `CarteiraPF` para aplicar limite diário; `CarteiraDAO` devolve cada linha como `CarteiraPF` ou `CarteiraPJ`; a `Main` chama `executar()` em cada `MenuBase` da lista e cada submenu responde com as suas operações |
+| **Classe abstrata (template method)** | `MenuBase` desenha o submenu, lê a opção e trata os erros; as subclasses implementam `incluir`, `alterar`, `excluir`, `exibirTodos` e `exibirUm` e podem acrescentar opções extras |
 | **Polimorfismo estático** | Sobrecarga de `depositar`, `sacar`, `registrarTransacao` e `atualizarPreco`, e os construtores que aceitam `double` ou `BigDecimal` (as versões `double` recebem a data como texto `yyyy-MM-dd`) |
 | **Abstração / interface** | `CrudDAO<T>` define o contrato comum (`inserir`, `alterar`, `excluir`, `buscarPorId`, `listarTodos`) implementado pelos 10 DAOs |
 | **Imutabilidade** | `Relatorio` fecha os números no construtor: campos `final`, sem setters — um snapshot não pode se contradizer |
@@ -299,6 +320,133 @@ Uma transação recusada não altera nada e não entra no histórico, então os 
 | Sprint 4 — Fase 4 | Modelo Relacional SQL (DDL Oracle, herança joined em Carteira); Normalização 1FN/2FN/3FN (`modelo/Normalizacao.pdf`); persistência em arquivos texto a partir de `ArrayList` e `HashMap` na `Main` da época (substituída na Fase 6; segue no histórico do git) |
 | Sprint 5 — Fase 5 | Script DDL (`sql/criptoinvest_ddl.sql`) e script DML (`sql/criptoinvest_dml.sql`); classe de conexão com o Oracle da FIAP (`ConnectionFactory`); integração completa da classe `Criptoativo` com o banco (`CriptoativoDAO`: inserir, alterar, excluir e exibir); métodos de teste dessa integração na `Main` da época |
 | Sprint 6 — Fase 6 | Integração JDBC completa: um DAO por tabela (10 tabelas) sobre `CrudDAO` + `BaseDAO`, ids das sequences, transações JDBC (herança joined e `TransacaoDAO.registrar`) e leitura polimórfica de `carteira`; datas em `LocalDate` e construtores de reconstrução no modelo; DDL revisado (marcas `-- [Fase 6]`) e Dicionário de Dados regerado (`modelo/Dicionario_de_Dados.pdf`); `Main` movida para `com.criptoinvest.Main` como teste de INSERT/SELECT/UPDATE/DELETE de todas as tabelas — ver [Fase 6](#fase-6--integração-completa-com-o-banco) |
+| Sprint 7 — Fase 7 | Programa Java console integrado ao Oracle: a `Main` abre o menu principal com 8 módulos (usuários, empresas, carteiras, criptoativos, transações, posições, alertas e relatórios), cada um com submenu de Inclusão, Alteração, Exclusão, Exibição de todos e de um registro, além de opções próprias; validação de todas as entradas (`Entrada` + `Validacoes`); estorno atômico de transações (`TransacaoDAO.estornar`); DDL sem alteração estrutural e DML com documentos válidos — ver [Fase 7](#fase-7--programa-console-com-menus) |
+
+## Fase 7 — Programa console com menus
+
+A `Main` é o back-end completo com interação pelo console: todo dado mostrado vem das tabelas e
+toda operação é gravada nelas pelos DAOs da Fase 6.
+
+### Menus
+
+```
+MENU PRINCIPAL
+  1 - Usuarios (pessoa fisica)             → clientes PF e a sua carteira PF
+  2 - Empresas (pessoa juridica)           → clientes PJ e a sua carteira PJ
+  3 - Carteiras                            → carteiras, depósito, saque e resumo
+  4 - Criptoativos                         → catálogo de moedas (os "produtos")
+  5 - Transacoes (compra e venda)
+  6 - Posicoes (custodia de criptoativos)
+  7 - Alertas de variacao
+  8 - Relatorios de desempenho
+  0 - Sair
+```
+
+Todo submenu tem as cinco operações pedidas nas opções 1 a 5 e as opções próprias do módulo a
+partir da 6 (0 volta ao menu principal):
+
+| Módulo | 1 Incluir | 2 Alterar | 3 Excluir | 4 Exibir todos | 5 Exibir um | Opções extras |
+|---|---|---|---|---|---|---|
+| Usuários | usuário + carteira PF (uma transação JDBC) | nome, CPF, e-mail, senha, 2FA, limite diário | se não tiver empresas, alertas nem movimento na carteira | tabela | dados + empresas | buscar por CPF; por e-mail; empresas do usuário |
+| Empresas | empresa + carteira PJ | razão social, CNPJ, dono, regime | se a carteira não tiver movimento | tabela | dados | buscar por CNPJ; empresas de um usuário |
+| Carteiras | carteira avulsa PF ou PJ | descrição, limite (PF) ou regime (PJ) | só avulsa e sem movimento | tabela com titular | totais, lucro, rentabilidade e posições | depositar; sacar; listar por tipo |
+| Criptoativos | nome, sigla, preço, variação, categoria | idem (preço novo recalcula a variação) | se não estiver em uso | tabela | dados | buscar por sigla; atualizar cotação |
+| Transações | compra ou venda, com resumo e confirmação | data e observação | estorno | tabela | dados | extrato de uma carteira |
+| Posições | custódia já existente | ajuste de quantidade / preço médio | com aviso da custódia | tabela | dados + lucro não realizado | posições de uma carteira |
+| Alertas | usuário × criptoativo + limite | limite; ativar/desativar | sim | tabela com situação | dados | ativos; por usuário; disparados |
+| Relatórios | gera o snapshot da carteira | regera com os números de hoje | sim | tabela | dados | relatórios de uma carteira |
+
+Toda exclusão mostra o registro e pede confirmação (S/N).
+
+### Convenções da digitação
+
+- `CANCELAR` em qualquer campo desiste da operação: nada é gravado.
+- Campo com valor entre colchetes (`Saldo inicial em R$ [R$ 0,00]:`): ENTER mantém esse valor — o
+  atual, na alteração, ou o sugerido, no cadastro. Nos campos opcionais da alteração, `-` apaga.
+- Onde se pede um ID, ENTER lista os registros cadastrados (`?` lista quando o campo já tem um
+  valor atual). Criptoativos podem ser escolhidos pelo ID ou pela sigla.
+- Números usam vírgula decimal, sem ponto de milhar (`1500,75`, `0,5`). O ponto é recusado: no
+  padrão brasileiro, usado também na exibição, `350.000` seria lido como 350.
+- Datas no formato `dd/mm/aaaa`.
+- Um erro nunca encerra o programa: a mensagem explica o motivo e o usuário volta ao submenu.
+
+### Validações
+
+A classe `Entrada` só devolve valores que o banco aceita, repetindo a pergunta com o motivo até o
+usuário acertar. As regras de negócio ficam no modelo e nos submenus.
+
+| Dado | Regra | Origem |
+|---|---|---|
+| Textos | obrigatórios não podem ficar vazios; tamanho medido em **bytes** UTF-8 (acento conta 2), como o Oracle mede o `VARCHAR2` | tamanhos do DDL |
+| Nome de pessoa | letras, espaços e `' . -`, com pelo menos 2 letras | regra do domínio |
+| CPF | 11 dígitos, dígitos verificadores, sem sequência repetida; gravado como `000.000.000-00`; único | `uk_usuario_cpf` |
+| CNPJ | 14 posições, numérico ou **alfanumérico** (regra da Receita Federal desde julho de 2026), dígitos verificadores; gravado como `00.000.000/0000-00`; único | `uk_empresa_cnpj` |
+| E-mail | formato `nome@dominio.tld`, gravado em minúsculas; único | `uk_usuario_email` |
+| Senha | 6 a 100 caracteres, sem espaços, com letras e números | regra do domínio |
+| Sigla | só letras e números, até 10, em maiúsculas; única | `uk_criptoativo_sigla` |
+| Dinheiro | ≥ 0, até 2 casas e 13 dígitos inteiros | `NUMBER(15,2)` e CHECKs |
+| Quantidade e preço de cripto | até 8 casas e 10 dígitos inteiros; na transação, ambos > 0 | `NUMBER(18,8)` e CHECKs |
+| Percentual | até 4 casas e 6 dígitos inteiros; limite do alerta > 0 | `NUMBER(10,4)` e `ck_alerta_limite` |
+| Datas | `dd/mm/aaaa` existente (31/02 é recusado), nem futura nem anterior a 03/01/2009 | regra do domínio |
+| Regime tributário | escolha entre SIMPLES, LUCRO_PRESUMIDO e LUCRO_REAL | `ck_carteira_pj_regime` |
+| Pares únicos | uma posição por carteira × criptoativo; um alerta por usuário × criptoativo | `uk_posicao_cart_cripto`, `uk_alerta_usuario_cripto` |
+
+As chaves únicas são conferidas **antes** do INSERT/UPDATE, com mensagem dizendo quem já usa o
+valor, e as dependências, antes do DELETE. O banco continua garantindo tudo: se algo escapar (outra
+sessão gravou no meio), `ErrosBanco` traduz o `ORA-xxxxx` em mensagem para o usuário.
+
+### Regras de negócio aplicadas pelos menus
+
+- **Compra e venda** (`Carteira.registrarTransacao` + `TransacaoDAO.registrar`): antes de
+  confirmar, o programa mostra valor bruto, taxa de 0,1%, total e saldo resultante. A compra é
+  recusada se o saldo em reais não cobre o total, a venda se a quantidade passa da custódia, e
+  operações abaixo de R$ 0,01 também são recusadas.
+- **Estorno** (`TransacaoDAO.estornar`, novo na Fase 7): excluir uma transação desfaz o efeito dela
+  numa única transação JDBC. A compra estornada devolve bruto + taxa ao saldo e retira a
+  quantidade da posição, recalculando o preço médio; a venda estornada retira o líquido do saldo e
+  devolve a quantidade. Só a última transação de cada criptoativo na carteira pode ser estornada
+  (as posteriores dependem dela) e o estorno de uma venda é recusado se o saldo ficasse negativo.
+  A posição que fica zerada e sem transações é apagada.
+- **Alteração de transação:** tipo, criptoativo, quantidade e preço já movimentaram saldo e
+  posição, então só data e observação mudam; para corrigir valores, estorna-se e registra-se de novo.
+- **Depósito e saque:** pela regra do modelo (`depositar`/`sacar`), com saque limitado ao saldo e,
+  na carteira PF, ao limite diário; o novo saldo é gravado com `CarteiraDAO.atualizarSaldo`.
+- **Carteiras e titulares:** a carteira de um usuário ou de uma empresa é criada e excluída junto
+  com o titular; pelo menu Carteiras só se exclui carteira avulsa. A descrição gerada no cadastro
+  (`Carteira PF de <nome>`) acompanha a troca de nome do titular.
+- **Exclusões com dependentes** são recusadas com o que impede (ex.: "possui 1 empresa(s) e 2
+  alerta(s)"); saldo ou custódia que seriam perdidos geram aviso antes da confirmação.
+- **Alertas:** ao cadastrar um alerta e ao atualizar a cotação de um criptoativo, os alertas ativos
+  que atingiram o limite são exibidos.
+- **Relatórios:** são snapshots, gerados a partir do histórico gravado da carteira e regerados por
+  inteiro na alteração — nunca editados à mão.
+
+### Collections
+
+Os DAOs devolvem as consultas em `ArrayList`, que os submenus percorrem para montar tabelas,
+listas de seleção, extratos e verificações (alertas disparados, dependências de um usuário). O menu
+principal guarda os módulos num `ArrayList<MenuBase>`, e a tabela de carteiras usa um `HashMap`
+id da carteira → titular, montado com uma listagem de usuários e uma de empresas, em vez de uma
+consulta por linha.
+
+### Testes realizados
+
+O programa foi executado contra o Oracle da FIAP com entradas roteirizadas cobrindo os 8 módulos:
+- todas as inclusões, alterações, exclusões e consultas;
+- as recusas de validação: CPF, CNPJ e e-mail inválidos, duplicidades, números e datas inválidos,
+  ponto decimal;
+- as regras de negócio: saldo insuficiente, venda acima da custódia, saque acima do limite,
+  estorno fora de ordem, exclusões com dependentes e `ORA-02292` traduzido;
+- a limpeza final pelos próprios menus: o saldo voltou exatamente ao valor anterior às compras e
+  todas as tabelas terminaram com 0 linhas.
+
+### Pacote de entrega
+
+`Fase7_VOLTZ_CriptoInvest.zip` contém:
+- `src/`, com uma classe por arquivo;
+- `sql/criptoinvest_ddl.sql`, a criação de todas as tabelas, sem alteração estrutural na Fase 7;
+- `sql/criptoinvest_dml.sql`, os dados de exemplo;
+- `.env_exemplo`, `pom.xml` e este README.
 
 ## Fase 6 — Integração completa com o banco
 
@@ -329,9 +477,9 @@ INSERT, UPDATE, DELETE e SELECT em Java. Cada DAO estende `BaseDAO` e implementa
 | `CarteiraPFDAO` | `carteira` + `carteira_pf` | `inserir` (pai e filha) | `alterar` (pai e filha) | `excluir` (filha e pai) | `buscarPorId`, `listarTodos` (`JOIN`) |
 | `CarteiraPJDAO` | `carteira` + `carteira_pj` | `inserir` (pai e filha) | `alterar` (pai e filha) | `excluir` (filha e pai) | `buscarPorId`, `listarTodos` (`JOIN`) |
 | `CarteiraDAO` | `carteira` (+ filhas) | `inserir` polimórfico (delega ao DAO da filha) | `alterar` (só a tabela pai: descrição e saldo), `atualizarSaldo` | `excluir` (filha e pai) | `buscarPorId`, `listarTodos`, `listarPorTipo` (`LEFT JOIN`, polimórficos), `carregarHistorico` |
-| `UsuarioDAO` | `usuario` (+ carteira PF) | `inserir` (carteira PF e usuário) | `alterar` (usuário e carteira PF) | `excluir` (usuário e carteira PF) | `buscarPorId`, `buscarPorCpf`, `buscarPorEmail`, `listarTodos` |
-| `EmpresaDAO` | `empresa` (+ carteira PJ) | `inserir` (carteira PJ e empresa; exige o dono já gravado) | `alterar` (empresa e carteira PJ) | `excluir` (empresa e carteira PJ) | `buscarPorId`, `buscarPorCnpj`, `listarPorUsuario`, `listarTodos` |
-| `TransacaoDAO` | `transacao` (+ `posicao` e `carteira` no `registrar`) | `registrar` (transação, posição e saldo); `inserir` (só a linha) | `alterar` (só a linha) | `excluir` (só a linha) | `buscarPorId`, `listarPorCarteira`, `listarTodos` |
+| `UsuarioDAO` | `usuario` (+ carteira PF) | `inserir` (carteira PF e usuário) | `alterar` (usuário e carteira PF) | `excluir` (usuário e carteira PF) | `buscarPorId`, `buscarPorCpf`, `buscarPorEmail`, `buscarPorCarteira` (Fase 7), `listarTodos` |
+| `EmpresaDAO` | `empresa` (+ carteira PJ) | `inserir` (carteira PJ e empresa; exige o dono já gravado) | `alterar` (empresa e carteira PJ) | `excluir` (empresa e carteira PJ) | `buscarPorId`, `buscarPorCnpj`, `buscarPorCarteira` (Fase 7), `listarPorUsuario`, `listarTodos` |
+| `TransacaoDAO` | `transacao` (+ `posicao` e `carteira` no `registrar`) | `registrar` (transação, posição e saldo); `inserir` (só a linha) | `alterar` (só a linha) | `estornar` (Fase 7: linha, posição e saldo); `excluir` (só a linha) | `buscarPorId`, `listarPorCarteira`, `listarTodos` |
 | `PosicaoDAO` | `posicao` | `inserir` | `alterar` | `excluir` | `buscarPorId`, `buscarPorCarteiraECripto`, `listarPorCarteira`, `listarTodos` |
 | `RelatorioDAO` | `relatorio` | `inserir` (grava o snapshot) | `alterar` (regrava o snapshot) | `excluir` | `buscarPorId`, `listarPorCarteira`, `listarTodos` (sem recalcular) |
 | `AlertaDAO` | `alerta` | `inserir` | `alterar` (`ativado` ↔ `'S'/'N'`) | `excluir` | `buscarPorId`, `listarPorUsuario`, `listarAtivos`, `listarTodos` |
@@ -383,7 +531,10 @@ mas a operação continua aplicada em memória: a carteira fica bloqueada para n
 ser recarregada do banco. `carregarHistorico` recusa uma cópia cujo saldo difere do gravado (ou
 uma carteira que não existe mais).
 
-### Como a `Main` testa cada tabela
+### Como a `Main` da Fase 6 testava cada tabela (histórico)
+
+> Roteiro da `Main` entregue na Fase 6, substituída na Fase 7 pelo programa de menus. O código
+> continua no histórico do git (commit `a608f1c`).
 
 Cada verificação roda isolada no método `testar` (o `try` de cada passo fica nele), então uma
 falha não interrompe as seguintes; um passo cujo pré-requisito falhou aparece como não executado
@@ -491,7 +642,8 @@ DDL acima, o modelo e os DAOs foram corrigidos nestes pontos:
   ele. Uma carteira relida do banco recomeça com o acumulado zerado, então o limite diário vale
   apenas dentro de um mesmo objeto. Depósitos e saques também não geram linha no banco: só o saldo
   final é gravado (`CarteiraDAO.alterar` ou `atualizarSaldo`). Persistir o acumulado (ex.: colunas
-  `saques_hoje` e `data_ultimo_saque` em `carteira_pf`) fica como melhoria futura.
+  `saques_hoje` e `data_ultimo_saque` em `carteira_pf`) fica como melhoria futura. No programa
+  (Carteiras > Sacar), cada saque é conferido contra o limite diário, mas não a soma do dia.
 - **MER e Normalização não foram atualizados:** `modelo/ModeloEntidadeRelacionamento.png` e
   `modelo/Normalizacao.pdf` ainda são os da Fase 4. Eles não têm `transacao.observacao`
   (criada na Fase 5) nem as alterações da Fase 6 (`descricao` com 200, `taxa`/`total_taxas`
@@ -505,10 +657,18 @@ DDL acima, o modelo e os DAOs foram corrigidos nestes pontos:
   Os UPDATEs 2.6 e 2.7 e os DELETEs 3.2 e 3.3 do DML também alteram posições e transações
   diretamente, sem a regra da carteira (saldo e posição deixam de corresponder às transações), e a
   consulta 4.7 ("Total investido por carteira") soma compras e vendas pelo valor bruto — é o total
-  movimentado. Os dados do DML são só exemplo: a `Main` não depende deles.
+  movimentado. Os dados do DML são só exemplo: o programa não depende deles.
 - **`TransacaoDAO.alterar` e `excluir` mexem só na linha:** corrigem ou apagam o registro, mas
   não refazem o saldo da carteira nem a posição. Operações de compra e venda devem passar por
-  `Carteira.registrarTransacao` + `TransacaoDAO.registrar`.
+  `Carteira.registrarTransacao` + `TransacaoDAO.registrar`. Por isso o programa só altera data e
+  observação de uma transação e a exclui por `TransacaoDAO.estornar`, que desfaz o efeito.
+- **Estorno só da última transação de cada criptoativo na carteira:** as posteriores dependem
+  dela (preço médio e quantidade disponível). Depois de um ajuste manual da posição, o preço médio
+  recalculado no estorno de uma compra é aproximado (e nunca fica negativo).
+- **Senha em texto puro:** `usuario.senha` guarda a senha como foi digitada, e ela aparece na tela
+  durante a digitação (o `Scanner` não oculta a entrada). Depois de gravada, o programa só mostra
+  `******`. Hash da senha e 2FA de verdade fazem parte da camada de segurança ainda não
+  implementada.
 - **Ids `int`:** as PKs e FKs são `NUMBER(10)` no banco e `int` no Java, então valem até
   2.147.483.647 — folga suficiente para o projeto.
 
