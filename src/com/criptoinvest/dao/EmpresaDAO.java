@@ -69,6 +69,9 @@ public class EmpresaDAO extends BaseDAO implements CrudDAO<Empresa> {
     private static final String SQL_SELECT_POR_CNPJ =
             SQL_SELECT_BASE + " WHERE e.cnpj = ?";
 
+    private static final String SQL_SELECT_POR_CARTEIRA =
+            SQL_SELECT_BASE + " WHERE e.id_carteira_pj = ?";
+
     private static final String SQL_SELECT_POR_USUARIO =
             SQL_SELECT_BASE + " WHERE e.id_usuario = ? ORDER BY e.id_empresa";
 
@@ -246,6 +249,20 @@ public class EmpresaDAO extends BaseDAO implements CrudDAO<Empresa> {
              PreparedStatement ps = conexao.prepareStatement(SQL_SELECT_POR_CNPJ)) {
 
             ps.setString(1, cnpj);
+            return primeiraEmpresa(conexao, ps);
+        }
+    }
+
+    /**
+     * Busca a empresa titular da carteira PJ informada (uk_empresa_carteira, 1:1).
+     * Retorna null quando a carteira nao pertence a nenhuma empresa (carteira
+     * avulsa, carteira PF ou id inexistente).
+     */
+    public Empresa buscarPorCarteira(int idCarteira) throws SQLException {
+        try (Connection conexao = abrirConexao();
+             PreparedStatement ps = conexao.prepareStatement(SQL_SELECT_POR_CARTEIRA)) {
+
+            ps.setInt(1, idCarteira);
             return primeiraEmpresa(conexao, ps);
         }
     }

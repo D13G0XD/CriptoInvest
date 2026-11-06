@@ -6,10 +6,12 @@ import com.criptoinvest.model.Posicao;
 import com.criptoinvest.model.Transacao;
 import com.criptoinvest.model.Valores;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +35,8 @@ import java.util.Map;
  *     a posicao do criptoativo e o novo saldo em reais da carteira;
  *   - inserir(t): grava SO a linha de transacao (CRUD basico), sem mexer em
  *     saldo nem em posicao.
+ * E duas de apagar: estornar(id), o inverso atomico de registrar (exclui a
+ * linha e desfaz o efeito na posicao e no saldo), e excluir(id), so a linha.
  *
  * Na leitura, a carteira vem de CarteiraDAO.buscarPorId(Connection, int) (PF ou
  * PJ, sem o historico; use CarteiraDAO.carregarHistorico quando precisar) e o
@@ -70,6 +74,13 @@ public class TransacaoDAO extends BaseDAO implements CrudDAO<Transacao> {
             "SELECT id_transacao, id_carteira, id_cripto, tipo, quantidade, preco_unitario, "
           + "       taxa, data_operacao, observacao "
           + "  FROM transacao ORDER BY id_transacao";
+
+    /** Ultima transacao (maior id) do par carteira x criptoativo: a unica que pode ser estornada. */
+    private static final String SQL_SELECT_ULTIMA_DO_PAR =
+            "SELECT MAX(id_transacao) AS ultima FROM transacao WHERE id_carteira = ? AND id_cripto = ?";
+
+    private static final String SQL_CONTAR_DO_PAR =
+            "SELECT COUNT(*) AS total FROM transacao WHERE id_carteira = ? AND id_cripto = ?";
 
     private final CriptoativoDAO criptoativoDAO = new CriptoativoDAO();
     private final PosicaoDAO posicaoDAO = new PosicaoDAO();
@@ -177,6 +188,102 @@ public class TransacaoDAO extends BaseDAO implements CrudDAO<Transacao> {
     }
 
     // ------------------------------------------------------------------------
+    // ESTORNAR (exclusao que desfaz o efeito na posicao e no saldo, atomico)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Exclui a transacao DESFAZENDO o seu efeito, numa UNICA transacao JDBC -
+     * o inverso de registrar:
+     *   1) DELETE da transacao;
+     *   2) a posicao do par carteira x criptoativo volta ao que era antes dela
+     *      (Posicao.estornarCompra / estornarVenda). A posicao que fica zerada
+     *      e sem nenhuma transacao do par e apagada, como se a compra que a
+     *      abriu nunca tivesse existido;
+     *   3) o saldo em reais da carteira: a compra estornada devolve bruto + taxa
+     *      e a venda estornada retira bruto - taxa.
+     * Ou grava tudo (commit) ou nada (rollback).
+     *
+     * So a ULTIMA transacao de cada par carteira x criptoativo pode ser
+     * estornada, porque as posteriores foram calculadas sobre o resultado dela
+     * (preco medio e quantidade disponivel para venda). Para estornar uma
+     * anterior, estorne antes as mais recentes.
+     *
+     * Diferente de excluir (CRUD), que apaga so a linha e deixa saldo e
+     * posicao como estavam.
+     *
+     * @return quantidade de transacoes excluidas (0 = id inexistente)
+     * @throws IllegalStateException quando a transacao nao e a ultima do par,
+     *         quando a posicao nao comporta o estorno (nao existe ou, na
+     *         compra, tem menos unidades que as compradas) ou quando o estorno
+     *         de uma venda deixaria o saldo em reais negativo
+     */
+    public int estornar(int idTransacao) throws SQLException {
+        try (Connection conexao = abrirConexao()) {
+            conexao.setAutoCommit(false);
+            try {
+                Transacao transacao = buscarPorId(conexao, idTransacao);
+                if (transacao == null) {
+                    conexao.rollback();
+                    return 0;
+                }
+                Carteira carteira = transacao.getCarteira();
+                Criptoativo criptoativo = transacao.getCriptoativo();
+                int idCarteira = carteira.getIdCarteira();
+                int idCripto = criptoativo.getIdCripto();
+
+                int ultima = idUltimaDoPar(conexao, idCarteira, idCripto);
+                if (ultima != idTransacao) {
+                    throw new IllegalStateException("A transacao #" + ultima + " de " + criptoativo.getSigla()
+                            + " foi registrada depois desta na mesma carteira e depende dela: "
+                            + "estorne antes as transacoes mais recentes.");
+                }
+
+                Posicao posicao = posicaoDAO.buscarPorCarteiraECripto(conexao, idCarteira, idCripto);
+                if (posicao == null) {
+                    throw new IllegalStateException("A carteira #" + idCarteira + " nao tem posicao de "
+                            + criptoativo.getSigla() + " para desfazer a operacao.");
+                }
+
+                boolean compra = "COMPRA".equals(transacao.getTipo());
+                BigDecimal valor = transacao.calcularValorComTaxa();
+                BigDecimal saldo = carteira.getSaldoReais();
+                BigDecimal novoSaldo = Valores.dinheiro(compra ? saldo.add(valor) : saldo.subtract(valor));
+                if (novoSaldo.signum() < 0) {
+                    throw new IllegalStateException("O estorno da venda retira R$ " + Valores.formatar(valor)
+                            + " da carteira, que so tem R$ " + Valores.formatar(saldo)
+                            + ": deposite a diferenca antes de estornar.");
+                }
+
+                LocalDate hoje = LocalDate.now();
+                if (compra) {
+                    posicao.estornarCompra(transacao.getQuantidade(), transacao.getPrecoUnitario(), hoje);
+                } else {
+                    posicao.estornarVenda(transacao.getQuantidade(), hoje);
+                }
+
+                int linhas;
+                try (PreparedStatement ps = conexao.prepareStatement(SQL_DELETE)) {
+                    ps.setInt(1, idTransacao);
+                    linhas = ps.executeUpdate();
+                }
+
+                if (Valores.zero(posicao.getQuantidadeAtual()) && contarDoPar(conexao, idCarteira, idCripto) == 0) {
+                    posicaoDAO.excluir(conexao, posicao.getIdPosicao());
+                } else {
+                    posicaoDAO.salvar(conexao, posicao);
+                }
+                carteiraDAO().atualizarSaldo(conexao, idCarteira, novoSaldo);
+
+                conexao.commit();
+                return linhas;
+            } catch (SQLException | RuntimeException e) {
+                desfazer(conexao);
+                throw e;
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
     // INSERIR
     // ------------------------------------------------------------------------
 
@@ -260,7 +367,8 @@ public class TransacaoDAO extends BaseDAO implements CrudDAO<Transacao> {
 
     /**
      * Exclui a transacao pelo id. Nenhuma tabela referencia transacao. Apaga
-     * apenas o registro: nao desfaz o efeito no saldo nem na posicao.
+     * apenas o registro: nao desfaz o efeito no saldo nem na posicao (para
+     * isso use estornar).
      *
      * @return quantidade de linhas excluidas (0 = id inexistente)
      */
@@ -284,9 +392,14 @@ public class TransacaoDAO extends BaseDAO implements CrudDAO<Transacao> {
      */
     @Override
     public Transacao buscarPorId(int idTransacao) throws SQLException {
-        try (Connection conexao = abrirConexao();
-             PreparedStatement ps = conexao.prepareStatement(SQL_SELECT_POR_ID)) {
+        try (Connection conexao = abrirConexao()) {
+            return buscarPorId(conexao, idTransacao);
+        }
+    }
 
+    /** Leitura pela chave primaria com a conexao recebida (usada por estornar, dentro da transacao). */
+    private Transacao buscarPorId(Connection conexao, int idTransacao) throws SQLException {
+        try (PreparedStatement ps = conexao.prepareStatement(SQL_SELECT_POR_ID)) {
             ps.setInt(1, idTransacao);
             List<Transacao> transacoes = lerTransacoes(conexao, ps, new HashMap<>());
             return transacoes.isEmpty() ? null : transacoes.get(0);
@@ -383,6 +496,28 @@ public class TransacaoDAO extends BaseDAO implements CrudDAO<Transacao> {
                     + " tem transacao aplicada em memoria e nao gravada (registrar anterior falhou ou nao foi "
                     + "chamado): recarregue a carteira do banco (CarteiraDAO.buscarPorId + carregarHistorico) "
                     + "antes de registrar novas transacoes.");
+        }
+    }
+
+    /** Id da ultima transacao (maior id) do par carteira x criptoativo; 0 quando o par nao tem transacoes. */
+    private static int idUltimaDoPar(Connection conexao, int idCarteira, int idCripto) throws SQLException {
+        try (PreparedStatement ps = conexao.prepareStatement(SQL_SELECT_ULTIMA_DO_PAR)) {
+            ps.setInt(1, idCarteira);
+            ps.setInt(2, idCripto);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt("ultima") : 0;
+            }
+        }
+    }
+
+    /** Quantidade de transacoes gravadas do par carteira x criptoativo. */
+    private static int contarDoPar(Connection conexao, int idCarteira, int idCripto) throws SQLException {
+        try (PreparedStatement ps = conexao.prepareStatement(SQL_CONTAR_DO_PAR)) {
+            ps.setInt(1, idCarteira);
+            ps.setInt(2, idCripto);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt("total") : 0;
+            }
         }
     }
 

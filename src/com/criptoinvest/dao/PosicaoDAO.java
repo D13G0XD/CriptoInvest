@@ -222,9 +222,14 @@ public class PosicaoDAO extends BaseDAO implements CrudDAO<Posicao> {
      */
     @Override
     public int excluir(int idPosicao) throws SQLException {
-        try (Connection conexao = abrirConexao();
-             PreparedStatement ps = conexao.prepareStatement(SQL_DELETE)) {
+        try (Connection conexao = abrirConexao()) {
+            return excluir(conexao, idPosicao);
+        }
+    }
 
+    /** Versao de pacote, com a conexao recebida: usada por TransacaoDAO.estornar, dentro da transacao dele. */
+    int excluir(Connection conexao, int idPosicao) throws SQLException {
+        try (PreparedStatement ps = conexao.prepareStatement(SQL_DELETE)) {
             ps.setInt(1, idPosicao);
             return ps.executeUpdate();
         }
@@ -255,9 +260,14 @@ public class PosicaoDAO extends BaseDAO implements CrudDAO<Posicao> {
      * desse criptoativo.
      */
     public Posicao buscarPorCarteiraECripto(int idCarteira, int idCripto) throws SQLException {
-        try (Connection conexao = abrirConexao();
-             PreparedStatement ps = conexao.prepareStatement(SQL_SELECT_POR_CARTEIRA_E_CRIPTO)) {
+        try (Connection conexao = abrirConexao()) {
+            return buscarPorCarteiraECripto(conexao, idCarteira, idCripto);
+        }
+    }
 
+    /** Versao de pacote, com a conexao recebida: usada por TransacaoDAO.estornar, dentro da transacao dele. */
+    Posicao buscarPorCarteiraECripto(Connection conexao, int idCarteira, int idCripto) throws SQLException {
+        try (PreparedStatement ps = conexao.prepareStatement(SQL_SELECT_POR_CARTEIRA_E_CRIPTO)) {
             ps.setInt(1, idCarteira);
             ps.setInt(2, idCripto);
             List<Posicao> posicoes = lerPosicoes(conexao, ps, new HashMap<>());

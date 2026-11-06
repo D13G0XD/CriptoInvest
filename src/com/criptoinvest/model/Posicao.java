@@ -134,6 +134,42 @@ public class Posicao {
         setDataUltimaAtualizacao(data);
     }
 
+    /**
+     * Desfaz uma compra (estorno): subtrai a quantidade e retira o valor da
+     * compra da media ponderada. E o inverso exato de aplicarCompra quando a
+     * compra foi a ultima operacao da posicao - por isso TransacaoDAO.estornar
+     * so estorna a ultima transacao de cada par carteira x criptoativo.
+     *
+     * @throws IllegalStateException quando a posicao tem menos unidades que a
+     *         compra (parte ja saiu por um ajuste manual da posicao)
+     */
+    public void estornarCompra(BigDecimal quantidade, BigDecimal precoUnitario, LocalDate data) {
+        if (Valores.maior(quantidade, quantidadeAtual)) {
+            throw new IllegalStateException("A posicao de " + criptoativo.getSigla() + " tem "
+                    + quantidadeAtual.stripTrailingZeros().toPlainString() + " unidade(s), menos que as "
+                    + quantidade.stripTrailingZeros().toPlainString()
+                    + " da compra: ajuste a posicao antes de estornar.");
+        }
+        BigDecimal novaQuantidade = Valores.cripto(quantidadeAtual.subtract(quantidade));
+        if (novaQuantidade.signum() > 0) {
+            BigDecimal valorRestante = quantidadeAtual.multiply(precoMedioCompra)
+                    .subtract(quantidade.multiply(precoUnitario));
+            // depois de um ajuste manual o valor restante pode ficar negativo:
+            // o preco medio para em zero (ck_posicao_preco)
+            this.precoMedioCompra = valorRestante.signum() <= 0
+                    ? Valores.ZERO_CRIPTO
+                    : valorRestante.divide(novaQuantidade, Valores.ESCALA_CRIPTO, Valores.ARREDONDAMENTO);
+        }
+        this.quantidadeAtual = novaQuantidade;
+        setDataUltimaAtualizacao(data);
+    }
+
+    /** Desfaz uma venda (estorno): devolve a quantidade; o preco medio fica igual, como a venda o deixou. */
+    public void estornarVenda(BigDecimal quantidade, LocalDate data) {
+        this.quantidadeAtual = Valores.cripto(quantidadeAtual.add(Valores.ouZero(quantidade)));
+        setDataUltimaAtualizacao(data);
+    }
+
     public BigDecimal calcularValorAtual() {
         return Valores.dinheiro(quantidadeAtual.multiply(criptoativo.getPrecoAtual()));
     }

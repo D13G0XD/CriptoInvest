@@ -68,6 +68,9 @@ public class UsuarioDAO extends BaseDAO implements CrudDAO<Usuario> {
     private static final String SQL_SELECT_POR_EMAIL =
             SQL_SELECT_BASE + " WHERE u.email = ?";
 
+    private static final String SQL_SELECT_POR_CARTEIRA =
+            SQL_SELECT_BASE + " WHERE u.id_carteira_pf = ?";
+
     private static final String SQL_SELECT_TODOS =
             SQL_SELECT_BASE + " ORDER BY u.id_usuario";
 
@@ -253,6 +256,22 @@ public class UsuarioDAO extends BaseDAO implements CrudDAO<Usuario> {
     /** Busca um usuario pelo e-mail (chave unica), comparado exatamente como foi gravado. Retorna null quando nao existe. */
     public Usuario buscarPorEmail(String email) throws SQLException {
         return buscarPorChaveUnica(SQL_SELECT_POR_EMAIL, email);
+    }
+
+    /**
+     * Busca o usuario titular da carteira PF informada (uk_usuario_carteira, 1:1).
+     * Retorna null quando a carteira nao pertence a nenhum usuario (carteira
+     * avulsa, carteira PJ ou id inexistente).
+     */
+    public Usuario buscarPorCarteira(int idCarteira) throws SQLException {
+        try (Connection conexao = abrirConexao();
+             PreparedStatement ps = conexao.prepareStatement(SQL_SELECT_POR_CARTEIRA)) {
+
+            ps.setInt(1, idCarteira);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? montarUsuario(rs) : null;
+            }
+        }
     }
 
     /** Lista todos os usuarios, cada um com a sua carteira PF, ordenados pelo id. */
